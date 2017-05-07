@@ -14,8 +14,25 @@ void setup() {
   xSize = int(600/30); //determina ancho baldosas
   ySize = int(600/30); //determina alto baldosas
   baldosas = new Cell[ySize][xSize]; //setea tamanno arena al ancho de las baldosas
-
-  tuvieja = new Robot(int(random(xSize)), int(random(ySize))); //posiciona al robot en un lugar random del mapa
+  
+  int px,py;
+  
+  if(random(1) > 0.5) { //posiciona el robot en un borde a una altura random
+    if(random(1) > 0.5)
+      px = 0;
+    else
+      px = xSize-1;
+    py = int(random(ySize));
+  }
+  else{
+    if(random(1) > 0.5)
+      py = 0;
+    else
+      py = ySize-1;
+    px = int(random(xSize));
+  }
+  
+  tuvieja = new Robot(px,py);
 
   for (int i = 0; i < xSize; i++) {
     for (int j = 0; j < ySize; j++) {
@@ -120,10 +137,16 @@ class Robot {
 
   void recorrer() {
     baldosas[y][x].visited = true;
-    if (!baldosas[y][x].east)
+    if(!baldosas[y][x].east)
       x++;
-    else if (!baldosas[y][x].south)
+    else if(!baldosas[y][x].south)
       y++;
+    else if(!baldosas[y][x].west) {
+      if(!baldosas[y][x].south)
+        y++;
+      else if(!baldosas[y][x].north)
+        y--;
+    }
     delay(300);
   }
 }
