@@ -5,37 +5,54 @@ int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
 
-Robot tuvieja = new Robot(3, 0);
+Robot robot = new Robot(3, 0);
 
-Cell[][] baldosas; //crea arena
+Cell[][] arena; //crea arena
 
 void setup() {
-  size(601, 601); //tamaño pantalla
-  xSize = int(600/30); //determina ancho baldosas
-  ySize = int(600/30); //determina alto baldosas
-  baldosas = new Cell[ySize][xSize]; //setea tamanno arena al ancho de las baldosas
-
-  tuvieja = new Robot(int(random(xSize)), int(random(ySize))); //posiciona al robot en un lugar random del mapa
+  size(1201, 601); //tamaño pantalla, ahora el doble de ancho
+  //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
+  xSize = int((width-1)/2/30); //determina ancho arena
+  ySize = int((height-1)/30); //determina alto arena
+  arena = new Cell[ySize][xSize]; //setea tamanno arena al ancho de las arena
+  
+  int px,py;
+  
+  if(random(1) > 0.5) { //posiciona el robot en un borde a una altura random
+    if(random(1) > 0.5)
+      px = 0;
+    else
+      px = xSize-1;
+    py = int(random(ySize));
+  }
+  else{
+    if(random(1) > 0.5)
+      py = 0;
+    else
+      py = ySize-1;
+    px = int(random(xSize));
+  }
+  
+  robot = new Robot(px,py);
 
   for (int i = 0; i < xSize; i++) {
     for (int j = 0; j < ySize; j++) {
-      baldosas[i][j] = new Cell(j, i, random(1)); //crea las baldosas
+      arena[i][j] = new Cell(j, i, random(1)); //crea las baldosas
     }
   }
   strokeWeight(2); //grosor lineas
 }
 
 void draw() {
-  background(255); //fondo
-
+  background(255,255,240); //fondo
+  robot.dibujar();
+  robot.recorrer();
   for (int i = 0; i < xSize; i++) {
     for (int j = 0; j < ySize; j++) {
-      baldosas[i][j].dibujar(); //dibuja las baldosas
+      arena[i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
+      if(arena[i][j].visited)arena[i][j].dibujar(width/2);//se replican las baldosas visitadas en la otra mitad de la pantalla.
     }
   }
-
-  tuvieja.recorrer();
-  tuvieja.dibujar();
 }
 
 class Cell {
@@ -43,7 +60,7 @@ class Cell {
   boolean south = false;
   boolean east = false;
   boolean west = false;
-  boolean visited;
+  boolean visited = false;
 
   int x, y, wid = 30;
 
@@ -53,11 +70,11 @@ class Cell {
 
     if (by == 0)//dibuja borde superior
       north = true;
-    else if(baldosas[by-1][bx].south) //sino si la baldosa superior tiene una pared en sur     
+    else if(arena[by-1][bx].south) //sino si la baldosa superior tiene una pared en sur     
       north = true;
     if (bx == 0)//dibuja borde izquierdo
       west = true;
-    else if(baldosas[by][bx-1].east) //sino si la baldosa a su izquierda tiene una pared este
+    else if(arena[by][bx-1].east) //sino si la baldosa a su izquierda tiene una pared este
       west = true;
     if (by == ySize-1)//dibuja borde inferior
       south = true;
@@ -78,8 +95,9 @@ class Cell {
     }
   }
 
-  void dibujar() {
+  void dibujar(int off) {//off es un parámetro que indica un desfazaje al pedir el dibujo de la baldosa. Se suma a x y después se revierte al salir.
     strokeWeight(2);
+    x+=off;
     stroke(0);
     if (north)line(x, y, x+wid, y);//north
     if (east)line(x+wid, y, x+wid, y+wid);//east
@@ -91,12 +109,13 @@ class Cell {
     line(x, y, x+wid, y);
     line(x+wid, y, x+wid, y+wid);
 
-    if (visited) {
+    if (visited){
       strokeWeight(2);
       stroke(50, 170, 50);
-      fill(50, 170, 50);
-      rect(x+5, y+5, 20, 20);
+      fill(50, 170, 50, 50);
+      rect(x+6, y+6, wid-12, wid-12);
     }
+    x-=off;
   }
 }
 
@@ -107,6 +126,7 @@ void mousePressed() { //al hacer click refrescar pista
 class Robot {
   int x, y;
   float wid = 30;
+  
   Robot(int bx, int by) {
     x = bx;
     y = by;
@@ -115,15 +135,21 @@ class Robot {
   void dibujar() {
     fill(0, 0, 255);
     strokeWeight(0);
-    rect(x*wid+3, y*wid+3, wid-6, wid-6);
+    rect(x*wid+4, y*wid+4, wid-8, wid-8);
   }
 
   void recorrer() {
-    baldosas[y][x].visited = true;
-    if (!baldosas[y][x].east)
+    arena[y][x].visited = true;
+    if(!arena[y][x].east)
       x++;
-    else if (!baldosas[y][x].south)
+    else if(!arena[y][x].south)
       y++;
-    delay(300);
+    else if(!arena[y][x].west) {
+      if(!arena[y][x].south)
+        y++;
+      else if(!arena[y][x].north)
+        y--;
+    }
+    delay(200);
   }
 }
