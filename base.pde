@@ -33,13 +33,15 @@ void setup() {
     px = int(random(xSize));
   }
   
-  robot = new Robot(px,py);
+  
 
   for (int i = 0; i < xSize; i++) {
     for (int j = 0; j < ySize; j++) {
       arena[i][j] = new Cell(j, i, random(1)); //crea las baldosas
     }
   }
+  robot = new Robot(px,py);
+  robot.init();
   strokeWeight(2); //grosor lineas
 }
 
@@ -125,13 +127,46 @@ void mousePressed() { //al hacer click refrescar pista
 
 class Robot {
   int x, y;
+  char dir;//dir podrá ser 'N','S','E', o 'W', indica la dirección actual del robot.
+  
   float wid = 30;
   
   Robot(int bx, int by) {
     x = bx;
     y = by;
   }
-
+  
+  void init(){
+    if(arena[y][x].north){//empezamos en el borde de arriba
+      if(arena[y][x].west){//tenemos una pared a la izquierda
+        if(arena[y][x].south){//y otra abajo
+          if(arena[y][x].east){//y a la derecha. Estamos encerrados
+            setup();//fuck
+          }
+          else dir = 'E';//hay salida a la derecha
+        }
+        else dir = 'S';//hay salida abajo, no importa otra cosa
+      }
+      else dir = 'W';//hay salida a la izquierda, no importa otra cosa
+    }
+    else if(arena[y][x].west){//hay una pared a la izquierda. Arriba no hay, pero se prefiere otra dirección
+      if(arena[y][x].south){//hay una pared abajo
+        if(arena[y][x].east){//y otra a la derecha. Única opción es arriba
+          dir = 'N';
+        }
+        else dir = 'E';//hay salida a la derecha 
+      }
+      else dir = 'S';//hay salida abajo
+    }
+    else if(arena[y][x].south){//hay una pared abajo, salidas arriba y a la izquierda
+      if(arena[y][x].east){//hay pared abajo y a la derecha, subir
+        dir = 'N';
+      }
+      else dir = 'E';//hay salida a la derecha
+    }
+    else dir = 'N';//hay una pared a la derecha solamente, subir.
+  }
+  
   void dibujar() {
     fill(0, 0, 255);
     strokeWeight(0);
@@ -139,7 +174,53 @@ class Robot {
   }
 
   void recorrer() {
+    
+      if(dir == 'N'){//está yendo hacia arriba
+        if(!arena[y][x].east){//y encuentra una baldosa a su derecha
+          dir = 'E';
+        }
+        else if(arena[y][x].north){//o una pared al frente
+          init();
+        }
+      }
+      else if(dir == 'W'){//está yendo hacia la izquierda
+        if(!arena[y][x].north){//y encuentra una baldosa a su derecha
+          dir = 'N';
+        }
+        else if(arena[y][x].west){//o una pared al frente
+          init();
+        }
+      }
+      else if(dir == 'S'){//está yendo hacia abajo
+        if(!arena[y][x].west){//y encuentra una baldosa a su derecha
+          dir = 'W';
+        }
+        else if(arena[y][x].south){//o una pared al frente
+          init();
+        }
+      }
+      else if(!arena[y][x].south){//está yendo a la derecha y encuentra una baldosa a su derecha
+        dir = 'S';
+      }
+      else if(arena[y][x].east){//o una pared al frente
+        init();
+      }
     arena[y][x].visited = true;
+    
+    
+    //lo que significa cada dirección en términos de índices
+    if(dir == 'N'){
+      y--;
+    }
+    else if(dir == 'E'){
+      x++;
+    }
+    else if(dir == 'S'){
+      y++;
+    }
+    else x--;
+    
+    /*
     if(!arena[y][x].east)
       x++;
     else if(!arena[y][x].south)
@@ -150,6 +231,7 @@ class Robot {
       else if(!arena[y][x].north)
         y--;
     }
-    delay(200);
+    */
+    //delay(200);
   }
 }
