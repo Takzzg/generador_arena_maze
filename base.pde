@@ -80,7 +80,7 @@ void setup() {
   robot = new Robot(px,py);
   arena[py][px].start = true;
 
-  robot.init();
+  robot.start();
 
   strokeWeight(2); //grosor lineas
 
@@ -266,7 +266,29 @@ class Robot {
 
   }
 
-  
+  void start(){
+    switch(y){
+      case 0:
+        dir = 'N';
+        break;
+        
+      case size:
+        dir = 'S';
+        break;
+        
+      default:
+        switch(x){
+          case 0:
+            dir = 'W';
+            break;
+          
+          default:
+            dir = 'E';
+            
+        }
+        
+    }
+  }
 
   void init(){
 
