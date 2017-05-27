@@ -66,6 +66,9 @@ class Cell {
   boolean start = false;
   boolean black = false;
   int stack = cont++;
+  int weight = 99999;
+  boolean out = false;
+  int[] steps;
 
   int x, y, wid = 30;
   int px, py;
@@ -178,6 +181,101 @@ class Robot {
 
       default:
         dir = 'N';
+      }
+    }
+  }
+
+  void search(Cell compareFrom){
+    Cell compareTo;
+    Cell[] options;
+    int amount = 0;
+    arena[compareFrom.y][compareFrom.x].weight = 0;
+    while(!robot.check(compareFrom.y, compareFrom.x){
+      if(!compareFrom.north){
+        if(!arena[compareFrom.y-1][compareFrom.x].out){
+          compareTo = arena[compareFrom.y-1][compareFrom.x];
+          options[amount]=compareTo;
+          amount++;
+          if(compareFrom.weight+1 < compareTo.weight){
+            compareTo.weight = compareFrom.weight+1;
+            compareTo.instructions = compareFrom.instructions;
+            compareTo.instructions[compareFrom.weight] = 'N';
+          }
+          arena[compareTo.y][compareTo.x] = compareTo;
+        }
+      }
+      if(!compareFrom.east){
+        if(!arena[compareFrom.y][compareFrom.x+1].out){
+          compareTo = arena[compareFrom.y][compareFrom.x+1];
+          amount++;
+          if(compareFrom.weight+1 < compareTo.weight){
+            compareTo.weight = compareFrom.weight+1;
+            compareTo.instructions = compareFrom.instructions;
+            compareTo.instructions[compareFrom.weight] = 'E';
+          }
+          arena[compareTo.y][compareTo.x] = compareTo;
+        }
+      }
+      if(!compareFrom.south){
+        if(!arena[compareFrom.y+1][compareFrom.x].out){
+          compareTo = arena[compareFrom.y+1][compareFrom.x];
+          amount++;
+          if(compareFrom.weight+1 < compareTo.weight){
+            compareTo.weight = compareFrom.weight+1;
+            compareTo.instructions = compareFrom.instructions;
+            compareTo.instructions[compareFrom.weight] = 'S';
+          }
+          arena[compareTo.y][compareTo.x] = compareTo;
+        }
+      }
+      if(!compareFrom.west){
+        if(!arena[compareFrom.y][compareFrom.x-1].out){
+          compareTo = arena[compareFrom.y][compareFrom.x-1];
+          amount++;
+          if(compareFrom.weight+1 < compareTo.weight){
+            compareTo.weight = compareFrom.weight+1;
+            compareTo.instructions = compareFrom.instructions;
+            compareTo.instructions[compareFrom.weight] = 'W';
+          }
+          arena[compareTo.y][compareTo.x] = compareTo;
+        }
+      }
+      arena[compareFrom.y][compareFrom.x].out = true;
+      int bestWeight = 9999;
+      for(int i = 0; i < amount; i++){
+        if(options[i].weight < bestWeight) bestWeight = options[i].weight;
+      }
+      for(int i = 0; i < amount; i++){
+        if(!options[i].out && options[i].weight == bestWeight) compareFrom = options[i];
+      }
+      for(int i = 0; i < amount; i++){
+        options[i].weight = 9999;}
+        options[i].out = false;
+      }
+    }
+
+    follow(compareFrom);
+  }
+
+  void follow(Cell target){
+    char heading;
+    for(int i = 0; i < target.weight; i++){
+      heading = instructions[i];
+      switch(heading){
+        case 'N':
+          y--;
+          break;
+
+        case 'S':
+          y++
+          break;
+
+        case 'W':
+          x--;
+          break;
+
+        default:
+          x++;
       }
     }
   }
@@ -297,13 +395,14 @@ class Robot {
 
     x-=off;
   }
+
   void recorrer() {
     arena[y][x].stack = cont++;
     arena[y][x].visited = true;
     px = x;
     py = y;
 
-    if (!check(y, x))stack();
+    if (!check(y, x))search();
 
     if (dir == 'N') {//está yendo hacia arriba
       if (!arena[y][x].east) {//y encuentra una baldosa a su derecha
