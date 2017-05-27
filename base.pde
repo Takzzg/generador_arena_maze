@@ -1,100 +1,56 @@
 float density = .6; //densidad de dibujado
-
 int cont = 0;
-
 float blackCell = .01; //densidad de celdas negras
-
 int checkpoint = 2; //densidad de checkpoints
-
 int xSize;
-
 int ySize;
-
 
 Robot robot = new Robot(3, 0);
 
-
 Cell[][] arena; //crea arena
-
 
 void setup() {
 
   size(1201, 601); //tamaño pantalla, ahora el doble de ancho
-
   //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
-
   xSize = int((width-1)/2/30); //determina ancho arena
-
   ySize = int((height-1)/30); //determina alto arena
-
   arena = new Cell[ySize][xSize]; //setea tamanno arena al ancho de las arena
-
-
 
   int px, py;
 
-
-
   if (random(1) > 0.5) { //posiciona el robot en un borde a una altura random
-
-    if (random(1) > 0.5)
-
-      px = 0;
-
-    else
-
-      px = xSize-1;
-
+    if (random(1) > 0.5) px = 0;
+    else px = xSize-1;
     py = int(random(ySize));
   } else {
-
-    if (random(1) > 0.5)
-
-      py = 0;
-
-    else
-
-      py = ySize-1;
-
+    if (random(1) > 0.5) py = 0;
+    else py = ySize-1;
     px = int(random(xSize));
   }
 
-
-
-
-
-
   for (int i = 0; i < xSize; i++) {
-
     for (int j = 0; j < ySize; j++) {
-
       arena[i][j] = new Cell(j, i, random(1)); //crea las baldosas
     }
   }
 
   robot = new Robot(px, py);
   arena[py][px].start = true;
-
   robot.start();
-
   strokeWeight(2); //grosor lineas
 }
 
 
 void draw() {
-
   background(255, 255, 240); //fondo
 
   robot.dibujar(0);
   robot.dibujar(xSize);
   robot.recorrer();
-
   for (int i = 0; i < xSize; i++) {
-
     for (int j = 0; j < ySize; j++) {
-
       arena[i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
-
       if (arena[i][j].visited)arena[i][j].dibujar(width/2);//se replican las baldosas visitadas en la otra mitad de la pantalla.
     }
   }
@@ -102,7 +58,6 @@ void draw() {
 
 
 class Cell {
-
   boolean north = false; //resetea todas las paredes para la baldosa nueva
   boolean south = false;
   boolean east = false;
@@ -112,7 +67,6 @@ class Cell {
   boolean black = false;
   int stack = cont++;
 
-
   int x, y, wid = 30;
   int px, py;
 
@@ -121,7 +75,6 @@ class Cell {
     x = bx * wid;
     y = by * wid;
     //px = x/wid;
-
     if (by == 0)//dibuja borde superior
       north = true;
     else if (arena[by-1][bx].south) //sino si la baldosa superior tiene una pared en sur 
@@ -137,23 +90,16 @@ class Cell {
     
     if(random(1)< blackCell)black=true;
      
-
     if (p < density) { //pregunta si dibuja o no
       if (random(1) < 0.2 && (!west || !north)) { //pregunta si dibuja 2 paredes o una
         south = true;
         east = true;
-      } else if (random(1) < 0.5) {//dibuja abajo
-        south = true;
-      } else {//dibuja adentro
-
-        east = true;
-      }
+      } else if (random(1) < 0.5) south = true;//dibuja abajo
+        else east = true;//dibuja adentro
     }
   }
 
-
   void dibujar(int off) {//off es un parámetro que indica un desfazaje al pedir el dibujo de la baldosa. Se suma a x y después se revierte al salir.
-
     strokeWeight(2);
     x+=off;
     stroke(0);
@@ -168,31 +114,34 @@ class Cell {
     line(x+wid, y, x+wid, y+wid);
 
     if (visited) {
+      stroke(50, 170, 50);
+      strokeWeight(2);
       fill(50, 170, 50, 50);
       rect(x+6, y+6, wid-12, wid-12);
       strokeWeight(2);
       //fill(0);
       //text(stack, x + 10, y + 20);
       stroke(0, 0, 255,60);
-      if (stack>0)line(px*wid + 15, py*wid + 15, x-off + 15, y + 15);
+      if (stack>0) line(px*wid + 15, py*wid + 15, x-off + 15, y + 15);
     }
-
     if (start) {
+      strokeWeight(2);
       fill(0, 255, 0);
+      stroke(0, 0, 255,60);
       rect(x+6, y+6, wid-12, wid-12);
     }
     if (black) {
-      fill(0);
-      rect(x,y,wid,wid);
+      stroke(0);
+      strokeWeight(2);
+      fill(40,40);
+      rect(x+3,y+3,wid-6,wid-6);
     }
-
     x-=off;
   }
 }
 
 
 void mousePressed() { //al hacer click refrescar pista
-
   setup();
 }
 
@@ -337,8 +286,8 @@ class Robot {
   void dibujar(int off) {
     x+=off;
     fill(0, 0, 255);
-
-    strokeWeight(0);
+    stroke(0, 0 , 255, 60);
+    strokeWeight(2);
     rect(x*wid+4, y*wid+4, wid-8, wid-8);
     fill(255, 50, 50);
     if (dir=='N')rect(x*wid+4, y*wid+4, 22, 5);
@@ -349,7 +298,6 @@ class Robot {
     x-=off;
   }
   void recorrer() {
-
     arena[y][x].stack = cont++;
     arena[y][x].visited = true;
     px = x;
