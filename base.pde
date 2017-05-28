@@ -1,6 +1,5 @@
-float density = .6; //densidad de dibujado
-int cont = 0;
-float blackCell = .01; //densidad de celdas negras
+float density = .5; //densidad de dibujado //<>//
+float blackCell = .0; //densidad de celdas negras
 int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
@@ -11,11 +10,12 @@ Cell[][] arena; //crea arena
 
 void setup() {
 
-  size(1201, 601); //tamaño pantalla, ahora el doble de ancho
+  size(1200, 600); //tamaño pantalla, ahora el doble de ancho
   //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
-  xSize = int((width-1)/2/30); //determina ancho arena
-  ySize = int((height-1)/30); //determina alto arena
-  arena = new Cell[ySize][xSize]; //setea tamanno arena al ancho de las arena
+  xSize = int((width)/2/30); //determina ancho arena
+  ySize = int((height)/30); //determina alto arena
+  frameRate(2);
+  arena = new Cell[ySize][xSize]; //setea tamaño arena al ancho de las arena
 
   int px, py;
 
@@ -29,8 +29,8 @@ void setup() {
     px = int(random(xSize));
   }
 
-  for (int i = 0; i < xSize; i++) {
-    for (int j = 0; j < ySize; j++) {
+  for (int i = 0; i < ySize; i++) {
+    for (int j = 0; j < xSize; j++) {
       arena[i][j] = new Cell(j, i, random(1)); //crea las baldosas
     }
   }
@@ -38,20 +38,21 @@ void setup() {
   robot = new Robot(px, py);
   arena[py][px].start = true;
   robot.start();
-  strokeWeight(2); //grosor lineas
+  robot.dibujar(0);
+  robot.dibujar(xSize);
 }
 
 
 void draw() {
   background(255, 255, 240); //fondo
 
+  robot.recorrer();
   robot.dibujar(0);
   robot.dibujar(xSize);
-  robot.recorrer();
-  for (int i = 0; i < xSize; i++) {
-    for (int j = 0; j < ySize; j++) {
+  for (int i = 0; i < ySize; i++) {
+    for (int j = 0; j < xSize; j++) {
       arena[i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
-      if (arena[i][j].visited)arena[i][j].dibujar(width/2);//se replican las baldosas visitadas en la otra mitad de la pantalla.
+      if (arena[i][j].visited)arena[i][j].dibujar(xSize);//se replican las baldosas visitadas en la otra mitad de la pantalla.
     }
   }
 }
@@ -65,18 +66,18 @@ class Cell {
   boolean visited = false;
   boolean start = false;
   boolean black = false;
-  int stack = cont++;
-  int weight = 99999;
+  int stack = robot.cont++;
+  int weight = 9999;
   boolean out = false;
-  int[] steps;
+  char[] instructions = {};
 
   int x, y, wid = 30;
   int px, py;
 
   Cell(int bx, int by, float p) { 
 
-    x = bx * wid;
-    y = by * wid;
+    x = bx;
+    y = by;
     //px = x/wid;
     if (by == 0)//dibuja borde superior
       north = true;
@@ -90,56 +91,58 @@ class Cell {
       south = true;
     if (bx == xSize-1)//dibuja borde derecho
       east = true; 
-    
-    if(random(1)< blackCell)black=true;
-     
+
+    if (random(1)< blackCell)black=true;
+
     if (p < density) { //pregunta si dibuja o no
       if (random(1) < 0.2 && (!west || !north)) { //pregunta si dibuja 2 paredes o una
         south = true;
         east = true;
       } else if (random(1) < 0.5) south = true;//dibuja abajo
-        else east = true;//dibuja adentro
+      else east = true;//dibuja a la derecha
     }
   }
 
   void dibujar(int off) {//off es un parámetro que indica un desfazaje al pedir el dibujo de la baldosa. Se suma a x y después se revierte al salir.
     strokeWeight(2);
     x+=off;
+    px+=off;
     stroke(0);
-    if (north)line(x, y, x+wid, y);//north
-    if (east)line(x+wid, y, x+wid, y+wid);//east
-    if (south) line(x, y+wid, x+wid, y+wid);//south
-    if (west)line(x, y, x, y+wid);//west
+    if (north)line(x*wid, y*wid, (x+1)*wid, y*wid);//north
+    if (east)line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);//east
+    if (south) line(x*wid, (y+1)*wid, (x+1)*wid, (y+1)*wid);//south
+    if (west)line(x*wid, y*wid, x*wid, (y+1)*wid);//west
 
     strokeWeight(0); // cuadricula gris
     stroke(0, 50);
-    line(x, y, x+wid, y);
-    line(x+wid, y, x+wid, y+wid);
+    line(x*wid, y*wid, (x+1)*wid, y*wid);
+    line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);
 
     if (visited) {
       stroke(50, 170, 50);
       strokeWeight(2);
       fill(50, 170, 50, 50);
-      rect(x+6, y+6, wid-12, wid-12);
+      rect(x*wid+6, y*wid+6, wid-12, wid-12);
       strokeWeight(2);
       //fill(0);
       //text(stack, x + 10, y + 20);
-      stroke(0, 0, 255,60);
-      if (stack>0) line(px*wid + 15, py*wid + 15, x-off + 15, y + 15);
+      stroke(0, 0, 255, 60);
+      if (stack>0) line(px*wid + 15, py*wid + 15, x*wid + 15, y*wid + 15);
     }
     if (start) {
       strokeWeight(2);
       fill(0, 255, 0);
-      stroke(0, 0, 255,60);
-      rect(x+6, y+6, wid-12, wid-12);
+      stroke(0, 0, 255, 60);
+      rect(x*wid+6, y*wid+6, wid-12, wid-12);
     }
     if (black) {
       stroke(0);
       strokeWeight(2);
-      fill(40,40);
-      rect(x+3,y+3,wid-6,wid-6);
+      fill(0, 40);
+      rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
     x-=off;
+    px-=off;
   }
 }
 
@@ -155,11 +158,11 @@ class Robot {
   char dir;//dir podrá ser 'N','S','E', o 'W', indica la dirección actual del robot.
   int cont;
   float wid = 30;
+  boolean ignore = false;
 
   Robot(int bx, int by) {
     cont = 0;
     x = bx;
-
     y = by;
   }
 
@@ -185,99 +188,136 @@ class Robot {
     }
   }
 
-  void search(Cell compareFrom){
-    Cell compareTo;
-    Cell[] options;
-    int amount = 0;
-    arena[compareFrom.y][compareFrom.x].weight = 0;
-    while(!robot.check(compareFrom.y, compareFrom.x){
-      if(!compareFrom.north){
-        if(!arena[compareFrom.y-1][compareFrom.x].out){
-          compareTo = arena[compareFrom.y-1][compareFrom.x];
-          options[amount]=compareTo;
-          amount++;
-          if(compareFrom.weight+1 < compareTo.weight){
-            compareTo.weight = compareFrom.weight+1;
-            compareTo.instructions = compareFrom.instructions;
-            compareTo.instructions[compareFrom.weight] = 'N';
+  void search(Cell compareFrom) {
+    println("SEARCHING...");
+    Cell compareTo = compareFrom;//Celda que será vista desde compareFrom
+    Cell[] options = new Cell[900];//array de opciones que almacena las celdas desde las que se podría comparar después
+    int amount = 0;//cantidad de celdas en el arreglo
+    arena[compareFrom.y][compareFrom.x].weight = 0;//el peso de la celda actual es 0
+    compareFrom.weight = 0;
+    while(!robot.check(compareFrom.y, compareFrom.x)) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
+      arena[compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
+      if (!compareFrom.north) {//no hay pared arriba
+        if (!arena[compareFrom.y-1][compareFrom.x].out) {//la baldosa de arriba no ha sido explorada
+          compareTo = arena[compareFrom.y-1][compareFrom.x];//Se usa para comparar
+          stroke(0, 0, 255);
+          strokeWeight(20);
+          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
+            options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
+            amount++;//Se suma 1 a la cantidad de opciones
+            arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
+            arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'N');//Se añade una instrucción más para llegar a compareTo
+            //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
-          arena[compareTo.y][compareTo.x] = compareTo;
         }
       }
-      if(!compareFrom.east){
-        if(!arena[compareFrom.y][compareFrom.x+1].out){
-          compareTo = arena[compareFrom.y][compareFrom.x+1];
-          amount++;
-          if(compareFrom.weight+1 < compareTo.weight){
-            compareTo.weight = compareFrom.weight+1;
-            compareTo.instructions = compareFrom.instructions;
-            compareTo.instructions[compareFrom.weight] = 'E';
+      if (!compareFrom.east) {//no hay pared a la derecha
+        if (!arena[compareFrom.y][compareFrom.x+1].out) {//la baldosa de la derecha no ha sido explorada
+          compareTo = arena[compareFrom.y][compareFrom.x+1];//Se usa para comparar
+          stroke(0, 0, 255);
+          strokeWeight(20);
+          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
+            options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
+            amount++;//Se suma 1 a la cantidad de opciones
+            arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
+            arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'E');//Se añade una instrucción más para llegar a compareTo
+            //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
-          arena[compareTo.y][compareTo.x] = compareTo;
         }
       }
-      if(!compareFrom.south){
-        if(!arena[compareFrom.y+1][compareFrom.x].out){
-          compareTo = arena[compareFrom.y+1][compareFrom.x];
-          amount++;
-          if(compareFrom.weight+1 < compareTo.weight){
-            compareTo.weight = compareFrom.weight+1;
-            compareTo.instructions = compareFrom.instructions;
-            compareTo.instructions[compareFrom.weight] = 'S';
+      if (!compareFrom.south) {//no hay pared abajo
+        if (!arena[compareFrom.y+1][compareFrom.x].out) {//la baldosa de abajo no ha sido explorada
+          compareTo = arena[compareFrom.y+1][compareFrom.x];//Se usa para comparar
+          stroke(0, 0, 255);
+          strokeWeight(20);
+          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
+            options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
+            amount++;//Se suma 1 a la cantidad de opciones
+            arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
+            arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'S');//Se añade una instrucción más para llegar a compareTo
+            //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
-          arena[compareTo.y][compareTo.x] = compareTo;
         }
       }
-      if(!compareFrom.west){
-        if(!arena[compareFrom.y][compareFrom.x-1].out){
-          compareTo = arena[compareFrom.y][compareFrom.x-1];
-          amount++;
-          if(compareFrom.weight+1 < compareTo.weight){
-            compareTo.weight = compareFrom.weight+1;
-            compareTo.instructions = compareFrom.instructions;
-            compareTo.instructions[compareFrom.weight] = 'W';
+      if (!compareFrom.west) {//no hay pared a la izquierda
+        if (!arena[compareFrom.y][compareFrom.x-1].out) {//la baldosa de la izquierda no ha sido explorada
+          compareTo = arena[compareFrom.y][compareFrom.x-1];//Se usa para comparar
+          stroke(0, 0, 255);
+          strokeWeight(20);
+          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
+            options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
+            amount++;//Se suma 1 a la cantidad de opciones
+            arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
+            arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'W');//Se añade una instrucción más para llegar a compareTo
+            //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
-          arena[compareTo.y][compareTo.x] = compareTo;
         }
       }
-      arena[compareFrom.y][compareFrom.x].out = true;
+
       int bestWeight = 9999;
-      for(int i = 0; i < amount; i++){
-        if(options[i].weight < bestWeight) bestWeight = options[i].weight;
+      for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
+        if (arena[options[i].y][options[i].x].weight < bestWeight && !arena[options[i].y][options[i].x].out){
+          bestWeight = arena[options[i].y][options[i].x].weight;
+        }
       }
-      for(int i = 0; i < amount; i++){
-        if(!options[i].out && options[i].weight == bestWeight) compareFrom = options[i];
+      for (int i = 0; i < amount; i++) {
+        if (!arena[options[i].y][options[i].x].out && arena[options[i].y][options[i].x].weight == bestWeight) {
+          compareFrom = arena[options[i].y][options[i].x];
+          break;
+        }
       }
-      for(int i = 0; i < amount; i++){
-        options[i].weight = 9999;}
-        options[i].out = false;
+      //delay(200);
+    }
+    println(compareFrom.y);
+    println(compareFrom.x);
+    strokeWeight(15);
+    point(compareFrom.x*wid+15, compareFrom.y*wid+15);
+    follow(arena[compareFrom.y][compareFrom.x]);
+
+    for (int i = 0; i < ySize; i++) {
+      for (int j = 0; j < xSize; j++) {
+        arena[i][j].weight = 9999;
+        arena[i][j].out = false;
+        arena[i][j].instructions = new char[0];
       }
     }
-
-    follow(compareFrom);
   }
 
-  void follow(Cell target){
+  void follow(Cell target) {
+    println("FOLLOWING");
+
     char heading;
-    for(int i = 0; i < target.weight; i++){
-      heading = instructions[i];
-      switch(heading){
-        case 'N':
-          y--;
-          break;
+    stroke(255, 0, 0);
+    for (int i = 0; i < target.weight; i++) {
+      println(target.instructions[i]);
+      heading = target.instructions[i];
+      point(x*wid+15, y*wid+15);
+      switch(heading) {
+      case 'N':
+        y--;
+        break;
 
-        case 'S':
-          y++
-          break;
+      case 'S':
+        y++;
+        break;
 
-        case 'W':
-          x--;
-          break;
+      case 'W':
+        x--;
+        break;
 
-        default:
-          x++;
+      default:
+        x++;
       }
     }
+    point(x*wid+15, y*wid+15);
   }
 
   boolean check(int y, int x) {
@@ -303,7 +343,7 @@ class Robot {
     }
     return false;
   }
-
+/*
   void stack() {
     int best = 9999;
     int bestY = 0, bestX = 0;
@@ -337,54 +377,56 @@ class Robot {
     }
     x = bestX;
     y = bestY;
-    if (best  == 9999){
-      delay(5000);
+    if (best  == 9999) {
+      delay(1000);
       setup();
-      
     }
   }
-
+*/
 
   void init() {
-    switch(dir) {
-    case 'N':
-      dir = 'W';
-      if (!arena[y][x].west) {
-        if (!arena[y][x-1].visited && !arena[y][x-1].black) {
-          return;
-        } else init();
-      } else init();
 
-    case 'W':
-      dir = 'S';
-      if (!arena[y][x].south) {
-        if (!arena[y+1][x].visited && !arena[y+1][x].black) {
-          return;
+    if (check(y, x)) {
+      switch(dir) {
+      case 'N':
+        dir = 'W';
+        if (!arena[y][x].west) {
+          if (!arena[y][x-1].visited && !arena[y][x-1].black) {
+            return;
+          } else init();
         } else init();
-      } else init();
 
-    case 'S':
-      dir = 'E';
-      if (!arena[y][x].east) {
-        if (!arena[y][x+1].visited && !arena[y][x+1].black) {
-          return;
+      case 'W':
+        dir = 'S';
+        if (!arena[y][x].south) {
+          if (!arena[y+1][x].visited && !arena[y+1][x].black) {
+            return;
+          } else init();
         } else init();
-      } else init();
 
-    case 'E':
-      dir = 'N';
-      if (!arena[y][x].north) {
-        if (!arena[y-1][x].visited && !arena[y-1][x].black) {
-          return;
+      case 'S':
+        dir = 'E';
+        if (!arena[y][x].east) {
+          if (!arena[y][x+1].visited && !arena[y][x+1].black) {
+            return;
+          } else init();
         } else init();
-      } else init();
-    }
+
+      case 'E':
+        dir = 'N';
+        if (!arena[y][x].north) {
+          if (!arena[y-1][x].visited && !arena[y-1][x].black) {
+            return;
+          } else init();
+        } else init();
+      }
+    } else ignore = true;
   }
 
   void dibujar(int off) {
     x+=off;
     fill(0, 0, 255);
-    stroke(0, 0 , 255, 60);
+    stroke(0, 0, 255, 60);
     strokeWeight(2);
     rect(x*wid+4, y*wid+4, wid-8, wid-8);
     fill(255, 50, 50);
@@ -397,12 +439,14 @@ class Robot {
   }
 
   void recorrer() {
-    arena[y][x].stack = cont++;
+
+    if (!ignore)arena[y][x].stack = cont++;
     arena[y][x].visited = true;
     px = x;
     py = y;
+    ignore = false;
 
-    if (!check(y, x))search();
+    if (!check(y, x))search(arena[y][x]);
 
     if (dir == 'N') {//está yendo hacia arriba
       if (!arena[y][x].east) {//y encuentra una baldosa a su derecha
@@ -460,16 +504,17 @@ class Robot {
       init();
     }
     //lo que significa cada dirección en términos de índices
-
-    if (dir == 'N') {
-      y--;
-    } else if (dir == 'E') {
-      x++;
-    } else if (dir == 'S') {
-      y++;
-    } else x--;
-    //delay(50);
-    arena[y][x].px = px;
-    arena[y][x].py = py;
+    if (!ignore) {
+      if (dir == 'N') {
+        y--;
+      } else if (dir == 'E') {
+        x++;
+      } else if (dir == 'S') {
+        y++;
+      } else x--;
+      //delay(200);
+      arena[y][x].px = px;
+      arena[y][x].py = py;
+    }
   }
 }
