@@ -188,6 +188,7 @@ class Robot {
   void search(Cell compareFrom) {
     Cell compareTo = compareFrom;
     Cell[] options = new Cell[900];
+    int index = 0;
     int amount = 0;
     arena[compareFrom.y/30][compareFrom.x/30].weight = 0;
     do {
@@ -256,6 +257,7 @@ class Robot {
         }
       }
       compareFrom.out = true;
+      options[index].out = true;
       arena[compareFrom.y/compareFrom.wid][compareFrom.x/compareFrom.wid].out = true;
 
       int bestWeight = 9999;
@@ -263,7 +265,10 @@ class Robot {
         if (arena[options[i].y/30][options[i].x/30].weight < bestWeight && !arena[options[i].y/30][options[i].x/30].out) bestWeight = arena[options[i].y/30][options[i].x/30].weight;
       }
       for (int i = 0; i < amount; i++) {
-        if (!arena[options[i].y/30][options[i].x/30].out && arena[options[i].y/30][options[i].x/30].weight == bestWeight) compareFrom = arena[options[i].y/30][options[i].x/30];
+        if (!arena[options[i].y/30][options[i].x/30].out && arena[options[i].y/30][options[i].x/30].weight == bestWeight){
+          compareFrom = arena[options[i].y/30][options[i].x/30];
+          index = i;
+        }
       }
       delay(200);
     } while (!robot.check(compareFrom.y/30, compareFrom.x/30));
