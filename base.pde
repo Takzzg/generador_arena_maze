@@ -1,5 +1,5 @@
 float density = .5; //densidad de dibujado //<>//
-float blackCell = .02; //densidad de celdas negras
+float blackCell = .1; //densidad de celdas negras
 int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
@@ -14,7 +14,7 @@ void setup() {
   //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
   xSize = int((width)/2/30); //determina ancho arena
   ySize = int((height)/30); //determina alto arena
-  frameRate(5);
+  frameRate(10);
   arena = new Cell[ySize][xSize]; //setea tamaño arena al ancho de las arena
 
   int px, py;
@@ -45,7 +45,7 @@ void setup() {
 
 void draw() {
   background(255, 255, 240); //fondo
-  frameRate(60);
+  frameRate(10);
   robot.recorrer();
   robot.dibujar(0);
   robot.dibujar(xSize);
@@ -104,9 +104,9 @@ class Cell {
   }
 
   void dibujar(int off) {//off es un parámetro que indica un desfazaje al pedir el dibujo de la baldosa. Se suma a x y después se revierte al salir.
-    strokeWeight(2);
     x+=off;
     px+=off;
+    strokeWeight(2);
     stroke(0);
     if (north)line(x*wid, y*wid, (x+1)*wid, y*wid);//north
     if (east)line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);//east
@@ -119,26 +119,30 @@ class Cell {
     line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);
 
     if (visited) {
-      stroke(50, 170, 50);
+      px+=xSize;
+      x+=xSize;
+      stroke(50, 170, 50, 100);
       strokeWeight(2);
       fill(50, 170, 50, 50);
       rect(x*wid+6, y*wid+6, wid-12, wid-12);
       strokeWeight(2);
       //fill(0);
       //text(stack, x + 10, y + 20);
-      stroke(0, 0, 255, 60);
+      stroke(0, 0, 255, 100);
       if (stack>0) line(px*wid + 15, py*wid + 15, x*wid + 15, y*wid + 15);
+      px-=xSize;
+      x-=xSize;
     }
     if (start) {
       strokeWeight(2);
       fill(0, 255, 0);
-      stroke(0, 0, 255, 60);
+      stroke(0, 0, 255, 100);
       rect(x*wid+6, y*wid+6, wid-12, wid-12);
     }
     if (black) {
       stroke(0);
       strokeWeight(2);
-      fill(0, 40);
+      fill(0, 200);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
     x-=off;
@@ -198,11 +202,11 @@ class Robot {
     while ((!check(compareFrom.y, compareFrom.x) && !end()) || (end() && !compareFrom.start)) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
       arena[compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
       if (!compareFrom.north) {//no hay pared arriba
-        if (!arena[compareFrom.y-1][compareFrom.x].out && !arena[compareFrom.y-1][compareFrom.x].black) {//la baldosa de arriba no ha sido explorada
+        if (!arena[compareFrom.y-1][compareFrom.x].out && !(arena[compareFrom.y-1][compareFrom.x].black && arena[compareFrom.y-1][compareFrom.x].visited)) {//la baldosa de arriba no ha sido explorada
           compareTo = arena[compareFrom.y-1][compareFrom.x];//Se usa para comparar
-          stroke(0, 0, 255);
-          strokeWeight(20);
-          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          //stroke(0, 0, 150);
+          //strokeWeight(15);
+          //point((compareFrom.x+xSize)*wid+15, compareTo.y*wid+15);
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
             options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
             amount++;//Se suma 1 a la cantidad de opciones
@@ -214,11 +218,11 @@ class Robot {
         }
       }
       if (!compareFrom.east) {//no hay pared a la derecha
-        if (!arena[compareFrom.y][compareFrom.x+1].out && !arena[compareFrom.y][compareFrom.x+1].black) {//la baldosa de la derecha no ha sido explorada
+        if (!arena[compareFrom.y][compareFrom.x+1].out && !(arena[compareFrom.y][compareFrom.x+1].black && arena[compareFrom.y][compareFrom.x+1].visited)) {//la baldosa de la derecha no ha sido explorada
           compareTo = arena[compareFrom.y][compareFrom.x+1];//Se usa para comparar
-          stroke(0, 0, 255);
-          strokeWeight(20);
-          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          //stroke(0, 0, 150);
+          //strokeWeight(15);
+          //point((compareFrom.x+xSize)*wid+15, compareTo.y*wid+15);
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
             options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
             amount++;//Se suma 1 a la cantidad de opciones
@@ -230,11 +234,11 @@ class Robot {
         }
       }
       if (!compareFrom.south) {//no hay pared abajo
-        if (!arena[compareFrom.y+1][compareFrom.x].out && !arena[compareFrom.y+1][compareFrom.x].black) {//la baldosa de abajo no ha sido explorada
+        if (!arena[compareFrom.y+1][compareFrom.x].out && !(arena[compareFrom.y+1][compareFrom.x].black && arena[compareFrom.y+1][compareFrom.x].visited)) {//la baldosa de abajo no ha sido explorada
           compareTo = arena[compareFrom.y+1][compareFrom.x];//Se usa para comparar
-          stroke(0, 0, 255);
-          strokeWeight(20);
-          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          //stroke(0, 0, 150);
+          //strokeWeight(15);
+          //point((compareFrom.x+xSize)*wid+15, compareTo.y*wid+15);
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
             options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
             amount++;//Se suma 1 a la cantidad de opciones
@@ -246,11 +250,11 @@ class Robot {
         }
       }
       if (!compareFrom.west) {//no hay pared a la izquierda
-        if (!arena[compareFrom.y][compareFrom.x-1].out && !arena[compareFrom.y][compareFrom.x-1].black) {//la baldosa de la izquierda no ha sido explorada
+        if (!arena[compareFrom.y][compareFrom.x-1].out && !(arena[compareFrom.y][compareFrom.x-1].black && arena[compareFrom.y][compareFrom.x-1].visited)) {//la baldosa de la izquierda no ha sido explorada
           compareTo = arena[compareFrom.y][compareFrom.x-1];//Se usa para comparar
-          stroke(0, 0, 255);
-          strokeWeight(20);
-          point(compareFrom.x*wid+15, compareTo.y*wid+15);
+          //stroke(0, 0, 150);
+          //strokeWeight(15);
+          //point((compareFrom.x+xSize)*wid+15, compareTo.y*wid+15);
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
             options[amount] = compareTo;//Se añade a las opciones para explorar más tarde
             amount++;//Se suma 1 a la cantidad de opciones
@@ -276,20 +280,20 @@ class Robot {
       }
       //delay(200);
     }
-    
-    stroke(255,0,255);
+
+    strokeWeight(15);
     for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
-      if (arena[options[i].y][options[i].x].out)point(options[i].x*wid+15, options[i].y*wid+15);
-      else{
-        stroke(0,0,255);
-        point(options[i].x*wid+15, options[i].y*wid+15);
+      if (arena[options[i].y][options[i].x].out){
+        stroke(0, 0, 0, 200);
+        point((options[i].x+xSize)*wid+15, options[i].y*wid+15);
+      }
+      else {
+        stroke(255, 0, 0);
+        point((options[i].x+xSize)*wid+15, options[i].y*wid+15);
       }
     }
-    //stroke(0,0,255);
     println(compareFrom.y);
     println(compareFrom.x);
-    //strokeWeight(15);
-    //point(compareFrom.x*wid+15, compareFrom.y*wid+15);
     follow(arena[compareFrom.y][compareFrom.x]);
 
     for (int i = 0; i < ySize; i++) {
@@ -301,11 +305,11 @@ class Robot {
     }
   }
 
-  boolean end(){
-    for(int i = 0; i < ySize; i++){
-      for(int j = 0; j < xSize; j++){
-        if(arena[i][j].visited){
-          if(check(i,j))return false;
+  boolean end() {
+    for (int i = 0; i < ySize; i++) {
+      for (int j = 0; j < xSize; j++) {
+        if (arena[i][j].visited && !arena[i][j].black) {
+          if (check(i, j))return false;
         }
       }
     }
@@ -314,13 +318,15 @@ class Robot {
 
   void follow(Cell target) {
     println("FOLLOWING");
-    if(end())frameRate(0.2);
+    if(target.weight == 0)delay(3000);
+    else frameRate(8/target.weight+0.3);
     char heading;
-    stroke(255, 0, 0);
+    stroke(0, 0, 255);
+    strokeWeight(15);
     for (int i = 0; i < target.weight; i++) {
       println(target.instructions[i]);
       heading = target.instructions[i];
-      point(x*wid+15, y*wid+15);
+      point((x+xSize)*wid+15, y*wid+15);
       switch(heading) {
       case 'N':
         y--;
@@ -338,27 +344,27 @@ class Robot {
         x++;
       }
     }
-    point(x*wid+15, y*wid+15);
+    point((x+xSize)*wid+15, y*wid+15);
   }
 
   boolean check(int y, int x) {
     if (!arena[y][x].north) {
-      if (!arena[y-1][x].visited && !arena[y-1][x].black) {
+      if (!arena[y-1][x].visited) {
         return true;
       }
     }
     if (!arena[y][x].south) {
-      if (!arena[y+1][x].visited && !arena[y+1][x].black) {
+      if (!arena[y+1][x].visited) {
         return true;
       }
     } 
     if (!arena[y][x].east) {
-      if (!arena[y][x+1].visited && !arena[y][x+1].black) {
+      if (!arena[y][x+1].visited) {
         return true;
       }
     }
     if (!arena[y][x].west) {
-      if (!arena[y][x-1].visited && !arena[y][x-1].black) {
+      if (!arena[y][x-1].visited) {
         return true;
       }
     }
@@ -412,7 +418,7 @@ class Robot {
       case 'N':
         dir = 'W';
         if (!arena[y][x].west) {
-          if (!arena[y][x-1].visited && !arena[y][x-1].black) {
+          if (!arena[y][x-1].visited) {
             return;
           } else init();
         } else init();
@@ -420,7 +426,7 @@ class Robot {
       case 'W':
         dir = 'S';
         if (!arena[y][x].south) {
-          if (!arena[y+1][x].visited && !arena[y+1][x].black) {
+          if (!arena[y+1][x].visited) {
             return;
           } else init();
         } else init();
@@ -428,7 +434,7 @@ class Robot {
       case 'S':
         dir = 'E';
         if (!arena[y][x].east) {
-          if (!arena[y][x+1].visited && !arena[y][x+1].black) {
+          if (!arena[y][x+1].visited) {
             return;
           } else init();
         } else init();
@@ -436,7 +442,7 @@ class Robot {
       case 'E':
         dir = 'N';
         if (!arena[y][x].north) {
-          if (!arena[y-1][x].visited && !arena[y-1][x].black) {
+          if (!arena[y-1][x].visited) {
             return;
           } else init();
         } else init();
@@ -471,57 +477,57 @@ class Robot {
 
     if (dir == 'N') {//está yendo hacia arriba
       if (!arena[y][x].east) {//y encuentra una baldosa a su derecha
-        if (!arena[y][x+1].visited && !arena[y][x+1].black) {//no está visitada
+        if (!arena[y][x+1].visited) {//no está visitada
           dir = 'E';
         } else if (arena[y][x].north) {//hay una pared al frente
           init();
-        } else if (arena[y-1][x].visited || arena[y-1][x].black) {
+        } else if (arena[y-1][x].visited) {
           init();
         }
       } else if (arena[y][x].north) {//o una pared al frente
         init();
-      } else if (arena[y-1][x].visited || arena[y-1][x].black) {
+      } else if (arena[y-1][x].visited) {
         init();
       }
     } else if (dir == 'W') {//está yendo hacia la izquierda
       if (!arena[y][x].north) {//y encuentra una baldosa a su derecha
-        if (!arena[y-1][x].visited && !arena[y-1][x].black) {
+        if (!arena[y-1][x].visited) {
           dir = 'N';
         } else if (arena[y][x].west) {//o una pared al frente
           init();
-        } else if (arena[y][x-1].visited || arena[y][x-1].black) {
+        } else if (arena[y][x-1].visited) {
           init();
         }
       } else if (arena[y][x].west) {//o una pared al frente
         init();
-      } else if (arena[y][x-1].visited || arena[y][x-1].black) {
+      } else if (arena[y][x-1].visited) {
         init();
       }
     } else if (dir == 'S') {//está yendo hacia abajo
       if (!arena[y][x].west) {//y encuentra una baldosa a su derecha
-        if (!arena[y][x-1].visited && !arena[y][x-1].black) {
+        if (!arena[y][x-1].visited) {
           dir = 'W';
         } else if (arena[y][x].south) {//o una pared al frente
           init();
-        } else if (arena[y+1][x].visited || arena[y+1][x].black) {
+        } else if (arena[y+1][x].visited) {
           init();
         }
       } else if (arena[y][x].south) {//o una pared al frente
         init();
-      } else if (arena[y+1][x].visited || arena[y+1][x].black) {
+      } else if (arena[y+1][x].visited) {
         init();
       }
     } else if (!arena[y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
-      if (!arena[y+1][x].visited && !arena[y+1][x].black) {
+      if (!arena[y+1][x].visited) {
         dir = 'S';
       } else if (arena[y][x].east) {//o una pared al frente
         init();
-      } else if (arena[y][x+1].visited || arena[y][x+1].black) {//o está visitada al frente
+      } else if (arena[y][x+1].visited) {//o está visitada al frente
         init();
       }
     } else if (arena[y][x].east) {//o una pared al frente
       init();
-    } else if (arena[y][x+1].visited || arena[y][x+1].black) {//o está visitada al frente
+    } else if (arena[y][x+1].visited) {//o está visitada al frente
       init();
     }
     //lo que significa cada dirección en términos de índices
@@ -534,8 +540,18 @@ class Robot {
         y++;
       } else x--;
       //delay(200);
+      arena[y][x].visited = true;
       arena[y][x].px = px;
       arena[y][x].py = py;
+      if (arena[y][x].black) {
+        if (dir == 'N') {
+          y++;
+        } else if (dir == 'E') {
+          x--;
+        } else if (dir == 'S') {
+          y--;
+        } else x++;
+      }
     }
   }
 }
