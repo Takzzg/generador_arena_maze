@@ -1,5 +1,5 @@
 float density = .5; //densidad de dibujado //<>//
-float blackCell = .0; //densidad de celdas negras
+float blackCell = .02; //densidad de celdas negras
 int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
@@ -14,7 +14,7 @@ void setup() {
   //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
   xSize = int((width)/2/30); //determina ancho arena
   ySize = int((height)/30); //determina alto arena
-  frameRate(2);
+  frameRate(5);
   arena = new Cell[ySize][xSize]; //setea tamaño arena al ancho de las arena
 
   int px, py;
@@ -45,7 +45,7 @@ void setup() {
 
 void draw() {
   background(255, 255, 240); //fondo
-
+  frameRate(60);
   robot.recorrer();
   robot.dibujar(0);
   robot.dibujar(xSize);
@@ -195,10 +195,10 @@ class Robot {
     int amount = 0;//cantidad de celdas en el arreglo
     arena[compareFrom.y][compareFrom.x].weight = 0;//el peso de la celda actual es 0
     compareFrom.weight = 0;
-    while(!robot.check(compareFrom.y, compareFrom.x)) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
+    while ((!check(compareFrom.y, compareFrom.x) && !end()) || (end() && !compareFrom.start)) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
       arena[compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
       if (!compareFrom.north) {//no hay pared arriba
-        if (!arena[compareFrom.y-1][compareFrom.x].out) {//la baldosa de arriba no ha sido explorada
+        if (!arena[compareFrom.y-1][compareFrom.x].out && !arena[compareFrom.y-1][compareFrom.x].black) {//la baldosa de arriba no ha sido explorada
           compareTo = arena[compareFrom.y-1][compareFrom.x];//Se usa para comparar
           stroke(0, 0, 255);
           strokeWeight(20);
@@ -208,13 +208,13 @@ class Robot {
             amount++;//Se suma 1 a la cantidad de opciones
             arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
             arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'N');//Se añade una instrucción más para llegar a compareTo
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions, 'N');//Se añade una instrucción más para llegar a compareTo
             //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
         }
       }
       if (!compareFrom.east) {//no hay pared a la derecha
-        if (!arena[compareFrom.y][compareFrom.x+1].out) {//la baldosa de la derecha no ha sido explorada
+        if (!arena[compareFrom.y][compareFrom.x+1].out && !arena[compareFrom.y][compareFrom.x+1].black) {//la baldosa de la derecha no ha sido explorada
           compareTo = arena[compareFrom.y][compareFrom.x+1];//Se usa para comparar
           stroke(0, 0, 255);
           strokeWeight(20);
@@ -224,13 +224,13 @@ class Robot {
             amount++;//Se suma 1 a la cantidad de opciones
             arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
             arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'E');//Se añade una instrucción más para llegar a compareTo
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions, 'E');//Se añade una instrucción más para llegar a compareTo
             //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
         }
       }
       if (!compareFrom.south) {//no hay pared abajo
-        if (!arena[compareFrom.y+1][compareFrom.x].out) {//la baldosa de abajo no ha sido explorada
+        if (!arena[compareFrom.y+1][compareFrom.x].out && !arena[compareFrom.y+1][compareFrom.x].black) {//la baldosa de abajo no ha sido explorada
           compareTo = arena[compareFrom.y+1][compareFrom.x];//Se usa para comparar
           stroke(0, 0, 255);
           strokeWeight(20);
@@ -240,13 +240,13 @@ class Robot {
             amount++;//Se suma 1 a la cantidad de opciones
             arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
             arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'S');//Se añade una instrucción más para llegar a compareTo
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions, 'S');//Se añade una instrucción más para llegar a compareTo
             //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
         }
       }
       if (!compareFrom.west) {//no hay pared a la izquierda
-        if (!arena[compareFrom.y][compareFrom.x-1].out) {//la baldosa de la izquierda no ha sido explorada
+        if (!arena[compareFrom.y][compareFrom.x-1].out && !arena[compareFrom.y][compareFrom.x-1].black) {//la baldosa de la izquierda no ha sido explorada
           compareTo = arena[compareFrom.y][compareFrom.x-1];//Se usa para comparar
           stroke(0, 0, 255);
           strokeWeight(20);
@@ -256,7 +256,7 @@ class Robot {
             amount++;//Se suma 1 a la cantidad de opciones
             arena[compareTo.y][compareTo.x].weight = compareFrom.weight+1;//Se cambia su peso
             arena[compareTo.y][compareTo.x].instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions,'W');//Se añade una instrucción más para llegar a compareTo
+            arena[compareTo.y][compareTo.x].instructions = append(arena[compareTo.y][compareTo.x].instructions, 'W');//Se añade una instrucción más para llegar a compareTo
             //arena[compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
           }
         }
@@ -264,7 +264,7 @@ class Robot {
 
       int bestWeight = 9999;
       for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
-        if (arena[options[i].y][options[i].x].weight < bestWeight && !arena[options[i].y][options[i].x].out){
+        if (arena[options[i].y][options[i].x].weight < bestWeight && !arena[options[i].y][options[i].x].out) {
           bestWeight = arena[options[i].y][options[i].x].weight;
         }
       }
@@ -276,10 +276,20 @@ class Robot {
       }
       //delay(200);
     }
+    
+    stroke(255,0,255);
+    for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
+      if (arena[options[i].y][options[i].x].out)point(options[i].x*wid+15, options[i].y*wid+15);
+      else{
+        stroke(0,0,255);
+        point(options[i].x*wid+15, options[i].y*wid+15);
+      }
+    }
+    //stroke(0,0,255);
     println(compareFrom.y);
     println(compareFrom.x);
-    strokeWeight(15);
-    point(compareFrom.x*wid+15, compareFrom.y*wid+15);
+    //strokeWeight(15);
+    //point(compareFrom.x*wid+15, compareFrom.y*wid+15);
     follow(arena[compareFrom.y][compareFrom.x]);
 
     for (int i = 0; i < ySize; i++) {
@@ -291,9 +301,20 @@ class Robot {
     }
   }
 
+  boolean end(){
+    for(int i = 0; i < ySize; i++){
+      for(int j = 0; j < xSize; j++){
+        if(arena[i][j].visited){
+          if(check(i,j))return false;
+        }
+      }
+    }
+    return true;
+  }
+
   void follow(Cell target) {
     println("FOLLOWING");
-
+    if(end())frameRate(0.2);
     char heading;
     stroke(255, 0, 0);
     for (int i = 0; i < target.weight; i++) {
@@ -343,46 +364,46 @@ class Robot {
     }
     return false;
   }
-/*
+  /*
   void stack() {
-    int best = 9999;
-    int bestY = 0, bestX = 0;
-    int bestStack = 0;
-    for (int i = 0; i < ySize; i++) {
-      for (int j = 0; j < xSize; j++) {
-        if (arena[i][j].visited) {
-          if (arena[y][x].stack - arena[i][j].stack < best && check(i, j)) {
-            best = arena[y][x].stack - arena[i][j].stack;
-            bestY = i;
-            bestX = j;
-            bestStack = arena[i][j].stack;
-          }
-        }
-      }
-    }
-    for (int i = 0; i < ySize; i++) {
-      for (int j = 0; j < xSize; j++) {
-        if (arena[i][j].visited && arena[i][j].stack == bestStack+1) {
-          if (i < bestY) {
-            dir = 'S';
-          } else if (i > bestY) {
-            dir = 'N';
-          } else if (j < bestX) {
-            dir = 'E';
-          } else if (j > bestX) {
-            dir = 'W';
-          }
-        }
-      }
-    }
-    x = bestX;
-    y = bestY;
-    if (best  == 9999) {
-      delay(1000);
-      setup();
-    }
-  }
-*/
+   int best = 9999;
+   int bestY = 0, bestX = 0;
+   int bestStack = 0;
+   for (int i = 0; i < ySize; i++) {
+   for (int j = 0; j < xSize; j++) {
+   if (arena[i][j].visited) {
+   if (arena[y][x].stack - arena[i][j].stack < best && check(i, j)) {
+   best = arena[y][x].stack - arena[i][j].stack;
+   bestY = i;
+   bestX = j;
+   bestStack = arena[i][j].stack;
+   }
+   }
+   }
+   }
+   for (int i = 0; i < ySize; i++) {
+   for (int j = 0; j < xSize; j++) {
+   if (arena[i][j].visited && arena[i][j].stack == bestStack+1) {
+   if (i < bestY) {
+   dir = 'S';
+   } else if (i > bestY) {
+   dir = 'N';
+   } else if (j < bestX) {
+   dir = 'E';
+   } else if (j > bestX) {
+   dir = 'W';
+   }
+   }
+   }
+   }
+   x = bestX;
+   y = bestY;
+   if (best  == 9999) {
+   delay(1000);
+   setup();
+   }
+   }
+   */
 
   void init() {
 
