@@ -1,14 +1,14 @@
-float density = .4; //densidad de dibujado //<>//
+float density = .05; //densidad de dibujado //<>//
 float doubleDensity = .2;
-float blackCell = .0; //densidad de celdas negras
+float blackCell = .01; //densidad de celdas negras
 float victimDensity = .1;
-int checkpoint = 2; //densidad de checkpoints
+float checkpoint = .02; //densidad de checkpoints
 int xSize;
 int ySize;
 
 Robot robot = new Robot(0, 0);
-
-
+Cell lastCheckpoint = new Cell(0, 0, 0);
+Cell[] history = new Cell[0];
 Cell[][][] arena; //crea arena
 Cell example = new Cell(0, 0, 0);
 void setup() {
@@ -45,22 +45,30 @@ void setup() {
     case 0:
       place = int(random(ySize));
       arena[h][0][place].exit = true;
+      arena[h][0][place].north = false;
       arena[h+1][0][place].exit = true;
+      arena[h+1][0][place].north = false;
       break;
     case 1:
       place = int(random(ySize));
       arena[h][ySize-1][place].exit = true;
+      arena[h][ySize-1][place].south = false;
       arena[h+1][ySize-1][place].exit = true;
+      arena[h+1][ySize-1][place].south = false;
       break;
     case 2:
       place = int(random(xSize));
       arena[h][place][0].exit = true;
+      arena[h][place][0].west = false;
       arena[h+1][place][0].exit = true;
+      arena[h+1][place][0].west = false;
       break;
     default:
       place = int(random(xSize));
       arena[h][place][xSize-1].exit = true;
+      arena[h][place][xSize-1].east = false;
       arena[h+1][place][xSize-1].exit = true;
+      arena[h+1][place][xSize-1].east = false;
     }
   }
 
@@ -70,12 +78,16 @@ void setup() {
   robot.start();
   robot.dibujar(0);
   robot.dibujar(xSize);
+  lastCheckpoint = arena[robot.z][py][px];
 }
 
 
 void draw() {
   background(255, 255, 240); //fondo
   frameRate(20);
+  fill(0);
+  text(robot.z, 20, 20);
+  text(robot.floorDir, 20, 40);
   robot.recorrer();
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
@@ -91,6 +103,7 @@ void draw() {
 class Cell {
   boolean north = false; //resetea todas las paredes para la baldosa nueva
   boolean south = false;
+  boolean check = false;
   boolean east = false;
   boolean west = false;
   boolean visited = false;
@@ -136,7 +149,7 @@ class Cell {
       } else if (random(1) < 0.5) south = true;//dibuja abajo
       else east = true;//dibuja a la derecha
     }
-    
+
     if (random(1) < victimDensity && !black && !start) { //where to place victims (if it does)
       if (random(1) < 0.3)victimStatus = 'U';
       else if (random(1) < 0.5)victimStatus = 'S';
@@ -145,6 +158,10 @@ class Cell {
       if (east)victim = 'E';
       if (south)victim = 'S';
       if (west)victim = 'W';
+    }
+
+    if (random(1) < checkpoint) {
+      check = true;
     }
   }
 
@@ -162,7 +179,7 @@ class Cell {
     stroke(0, 50);
     line(x*wid, y*wid, (x+1)*wid, y*wid);
     line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);
-    
+
     if (victimStatus == 'H')fill(255, 0, 0);
     if (victimStatus == 'S')fill(255, 255, 0);
     if (victimStatus == 'U')fill(0, 255, 0);
@@ -187,16 +204,17 @@ class Cell {
       strokeWeight(2);
       fill(50, 170, 50, 50);
       rect(x*wid+6, y*wid+6, wid-12, wid-12);
-      strokeWeight(2);
-      //fill(0);
-      //text(stack, x + 10, y + 20);
-      stroke(0, 0, 255, 100);
-      if (stack>0) line(px*wid + 15, py*wid + 15, x*wid + 15, y*wid + 15);
     }
     if (start) {
       strokeWeight(2);
       fill(0, 255, 0, 200);
       stroke(0, 255, 0);
+      rect(x*wid+3, y*wid+3, wid-6, wid-6);
+    }
+    if (check) {
+      stroke(255, 200, 200);
+      fill(255, 200, 200, 50);
+      strokeWeight(2);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
     if (black) {
@@ -234,7 +252,22 @@ class Cell {
 void mousePressed() { //al hacer click refrescar pista
   setup();
 }
-
+void keyPressed() {
+  for (int h = 0; h < 5; h++) {
+    for (int i = 0; i < ySize; i++) {
+      for (int j = 0; j < xSize; j++) {
+        for (int k = 0; k < history.length; k++) {
+          if (h == history[k].z && i == history[k].y && j == history[k].x) {
+            arena[h][i][j].visited = false;
+            robot.z = lastCheckpoint.z;
+            robot.y = lastCheckpoint.y;
+            robot.x = lastCheckpoint.x;
+          }
+        }
+      }
+    }
+  }
+}
 
 class Robot {
   int x, y, z;
@@ -283,7 +316,7 @@ class Robot {
     compareFrom.weight = 0;
     while ((!check(compareFrom.y, compareFrom.x) && !end()) || (end() && (!compareFrom.start && z == 0 || (!compareFrom.exit && z != 0)))) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
       arena[robot.z][compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
-      if (!compareFrom.north) {//no hay pared arriba
+      if (!compareFrom.north && compareFrom.y != 0) {//no hay pared arriba
         if (!arena[robot.z][compareFrom.y-1][compareFrom.x].out && !(arena[robot.z][compareFrom.y-1][compareFrom.x].black && arena[robot.z][compareFrom.y-1][compareFrom.x].visited)) {//la baldosa de arriba no ha sido explorada
           compareTo = arena[robot.z][compareFrom.y-1][compareFrom.x];//Se usa para comparar
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
@@ -295,7 +328,7 @@ class Robot {
           }
         }
       }
-      if (!compareFrom.east) {//no hay pared a la derecha
+      if (!compareFrom.east && compareFrom.x != xSize-1) {//no hay pared a la derecha
         if (!arena[robot.z][compareFrom.y][compareFrom.x+1].out && !(arena[robot.z][compareFrom.y][compareFrom.x+1].black && arena[robot.z][compareFrom.y][compareFrom.x+1].visited)) {//la baldosa de la derecha no ha sido explorada
           compareTo = arena[robot.z][compareFrom.y][compareFrom.x+1];//Se usa para comparar
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
@@ -307,7 +340,7 @@ class Robot {
           }
         }
       }
-      if (!compareFrom.south) {//no hay pared abajo
+      if (!compareFrom.south && compareFrom.y != ySize-1) {//no hay pared abajo
         if (!arena[robot.z][compareFrom.y+1][compareFrom.x].out && !(arena[robot.z][compareFrom.y+1][compareFrom.x].black && arena[robot.z][compareFrom.y+1][compareFrom.x].visited)) {//la baldosa de abajo no ha sido explorada
           compareTo = arena[robot.z][compareFrom.y+1][compareFrom.x];//Se usa para comparar
           if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
@@ -319,7 +352,7 @@ class Robot {
           }
         }
       }
-      if (!compareFrom.west) {//no hay pared a la izquierda
+      if (!compareFrom.west && compareFrom.x != 0) {//no hay pared a la izquierda
         if (!arena[robot.z][compareFrom.y][compareFrom.x-1].out && !(arena[robot.z][compareFrom.y][compareFrom.x-1].black && arena[robot.z][compareFrom.y][compareFrom.x-1].visited)) {//la baldosa de la izquierda no ha sido explorada
           compareTo = arena[robot.z][compareFrom.y][compareFrom.x-1];//Se usa para comparar
           //stroke(0, 0, 150);
@@ -424,22 +457,22 @@ class Robot {
   }
 
   boolean check(int y, int x) {
-    if (!arena[robot.z][y][x].north) {
+    if (!arena[robot.z][y][x].north && y != 0  && y != 0) {
       if (!arena[robot.z][y-1][x].visited) {
         return true;
       }
     }
-    if (!arena[robot.z][y][x].south) {
+    if (!arena[robot.z][y][x].south && y != ySize-1 && y != ySize - 1) {
       if (!arena[robot.z][y+1][x].visited) {
         return true;
       }
     } 
-    if (!arena[robot.z][y][x].east) {
+    if (!arena[robot.z][y][x].east && x != xSize-1 && x != xSize - 1) {
       if (!arena[robot.z][y][x+1].visited) {
         return true;
       }
     }
-    if (!arena[robot.z][y][x].west) {
+    if (!arena[robot.z][y][x].west && x != 0 && x != 0) {
       if (!arena[robot.z][y][x-1].visited) {
         return true;
       }
@@ -452,7 +485,7 @@ class Robot {
       switch(dir) {
       case 'N':
         dir = 'W';
-        if (!arena[robot.z][y][x].west) {
+        if (!arena[robot.z][y][x].west && x != 0) {
           if (!arena[robot.z][y][x-1].visited) {
             ignore = true;
             return;
@@ -461,7 +494,7 @@ class Robot {
 
       case 'W':
         dir = 'S';
-        if (!arena[robot.z][y][x].south) {
+        if (!arena[robot.z][y][x].south && y != ySize-1) {
           if (!arena[robot.z][y+1][x].visited) {
             ignore = true;
             return;
@@ -470,7 +503,7 @@ class Robot {
 
       case 'S':
         dir = 'E';
-        if (!arena[robot.z][y][x].east) {
+        if (!arena[robot.z][y][x].east && x != xSize-1) {
           if (!arena[robot.z][y][x+1].visited) {
             ignore = true;
             return;
@@ -479,7 +512,7 @@ class Robot {
 
       case 'E':
         dir = 'N';
-        if (!arena[robot.z][y][x].north) {
+        if (!arena[robot.z][y][x].north && y != 0) {
           if (!arena[robot.z][y-1][x].visited) {
             ignore = true;
             return;
@@ -517,78 +550,76 @@ class Robot {
   void recorrer() {
 
     if (!ignore)arena[robot.z][y][x].stack = cont++;
-
     px = x;
     py = y;
 
     ignore = false;
-    if (z == 4) floorDir = -1;
+    if (floorDir == 1 ) if (end()) floorDir = -1;
 
     if (!check(y, x))
-
       if (!arena[z][y][x].exit)search(arena[robot.z][y][x]);
       else z += floorDir;
     if (!ignore) {
       switch (dir) {
       case 'N'://está yendo hacia arriba
-        if (!arena[robot.z][y][x].east) {//y encuentra una baldosa a su derecha
+        if (!arena[robot.z][y][x].east && x != xSize-1) {//y encuentra una baldosa a su derecha
           if (!arena[robot.z][y][x+1].visited) {//no está visitada
             dir = 'E';
             ignore = true;
-          } else if (arena[robot.z][y][x].north) {//hay una pared al frente
+          } else if (arena[robot.z][y][x].north || y == 0) {//hay una pared al frente
             init();
           } else if (arena[robot.z][y-1][x].visited) {
             init();
           }
-        } else if (arena[robot.z][y][x].north) {//o una pared al frente
+        } else if (arena[robot.z][y][x].north || y == 0) {//o una pared al frente
           init();
         } else if (arena[robot.z][y-1][x].visited) {
           init();
         }
         break;
       case 'W'://está yendo hacia la izquierda
-        if (!arena[robot.z][y][x].north) {//y encuentra una baldosa a su derecha
+        if (!arena[robot.z][y][x].north && y != 0) {//y encuentra una baldosa a su derecha
           if (!arena[robot.z][y-1][x].visited) {
             dir = 'N';
             ignore = true;
-          } else if (arena[robot.z][y][x].west) {//o una pared al frente
+          } else if (arena[robot.z][y][x].west || x == 0) {//o una pared al frente
             init();
           } else if (arena[robot.z][y][x-1].visited) {
             init();
           }
-        } else if (arena[robot.z][y][x].west) {//o una pared al frente
+        } else if (arena[robot.z][y][x].west || x == 0) {//o una pared al frente
           init();
         } else if (arena[robot.z][y][x-1].visited) {
           init();
         }
         break;
       case 'S'://está yendo hacia abajo
-        if (!arena[robot.z][y][x].west) {//y encuentra una baldosa a su derecha
+        if (!arena[robot.z][y][x].west && x != 0) {//y encuentra una baldosa a su derecha
           if (!arena[robot.z][y][x-1].visited) {
             dir = 'W';
             ignore = true;
-          } else if (arena[robot.z][y][x].south) {//o una pared al frente
+          } else if (arena[robot.z][y][x].south || y == ySize - 1) {//o una pared al frente
             init();
           } else if (arena[robot.z][y+1][x].visited) {
             init();
           }
-        } else if (arena[robot.z][y][x].south) {//o una pared al frente
+        } else if (arena[robot.z][y][x].south || y == ySize - 1) {//o una pared al frente
           init();
         } else if (arena[robot.z][y+1][x].visited) {
           init();
         }
         break;
       default:
-        if (!arena[robot.z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
+        if (!arena[robot.z][y][x].south && y != ySize-1) {//está yendo a la derecha y encuentra una baldosa a su derecha
           if (!arena[robot.z][y+1][x].visited) {
             dir = 'S';
             ignore = true;
-          } else if (arena[robot.z][y][x].east) {//o una pared al frente
+          } else if (arena[robot.z][y][x].east || x == xSize-1) {//o una pared al frente
             init();
           } else if (arena[robot.z][y][x+1].visited) {//o está visitada al frente
             init();
           }
-        } else if (arena[robot.z][y][x].east) {//o una pared al frente
+        } else if (arena[robot.z][y][x].east || x == xSize-1) {//o una pared al frente
           init();
         } else if (arena[robot.z][y][x+1].visited) {//o está visitada al frente
           init();
@@ -630,13 +661,30 @@ class Robot {
           x++;
         }
       }
-      if (arena[z][y][x].exit) {      
+      if (arena[z][y][x].exit) {
+        if (!arena[z][y][x].check) {
+          history = (Cell[])append(history, arena[z][y][x]);
+        } else { 
+          history = new Cell[0];
+          lastCheckpoint = arena[z][y][x];
+        }
         arena[z][y][x].visited = true;
         z += floorDir;
-        arena[z-floorDir][y][x].exit = false;
+        delay(100);
+        if(floorDir < 0) {
+          println("OwO");
+          delay(3000);
+          arena[z][y][x].exit = false;
+        }
         ignore = true;
         arena[z][y][x].visited = true;
       }
+    }
+    if (!arena[z][y][x].check) {
+      history = (Cell[])append(history, arena[z][y][x]);
+    } else { 
+      history = new Cell[0];
+      lastCheckpoint = arena[z][y][x];
     }
   }
 }
