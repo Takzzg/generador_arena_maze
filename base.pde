@@ -1,4 +1,3 @@
-
 float density = .5; //densidad de dibujado //<>//
 float doubleDensity = .2;
 float blackCell = .04; //densidad de celdas negras
@@ -7,16 +6,15 @@ int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
 
-Robot robot = new Robot(0,0);
+Robot robot = new Robot(0, 0);
 
 Kit[][] kits;
 
 Cell[][] arena; //crea arena
-Cell example = new Cell(0,0);
+Cell example = new Cell(0, 0);
 void setup() {
 
   size(1500, 750); //tamaño pantalla, ahora el doble de ancho
-  //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
   xSize = int((width)/2/example.wid); //determina ancho arena
   ySize = int((height)/example.wid); //determina alto arena
   frameRate(60);
@@ -49,7 +47,6 @@ void setup() {
   robot.dibujar(xSize);
 }
 
-
 void draw() {
   background(255, 255, 240); //fondo
   frameRate(60);
@@ -77,8 +74,7 @@ class Cell {
   int stack = robot.cont++;
   int weight = 9999;
   boolean out = false;
-  boolean leftVictim = false;
-  boolean rightVictim = false;
+  char victim = 'F';
   char[] instructions = {};
 
   int x, y, wid = 30;
@@ -88,7 +84,6 @@ class Cell {
 
     x = bx;
     y = by;
-    //px = x/wid;
     if (by == 0)//dibuja borde superior
       north = true;
     else if (arena[by-1][bx].south) //sino si la baldosa superior tiene una pared en sur 
@@ -103,15 +98,20 @@ class Cell {
       east = true; 
 
     if (random(1) < blackCell)black=true;
-    if (random(1) < victimDensity) rightVictim = true;
-    if (random(1) < victimDensity) leftVictim = true;
-    
+
     if (random(1) < density) { //pregunta si dibuja o no
       if (random(1) < doubleDensity && (!west || !north)) { //pregunta si dibuja 2 paredes o una
         south = true;
         east = true;
       } else if (random(1) < 0.5) south = true;//dibuja abajo
       else east = true;//dibuja a la derecha
+    }
+    
+    if(random(1) < victimDensity && !black){ //where to place victims (if it does)
+      if(north)victim = 'N';
+      if(east)victim = 'E';
+      if(south)victim = 'S';
+      if(west)victim = 'W';
     }
   }
 
@@ -124,6 +124,23 @@ class Cell {
     if (east)line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);//east
     if (south) line(x*wid, (y+1)*wid, (x+1)*wid, (y+1)*wid);//south
     if (west)line(x*wid, y*wid, x*wid, (y+1)*wid);//west
+    
+    fill(255,0,0);
+    strokeWeight(0);
+    switch(victim){
+    case 'N':
+        rect(x*wid +10, y*wid +2, 10, 5);
+        break;
+    case 'E':
+        rect(x*wid +24, y*wid +10, 5, 10);
+        break;
+    case 'S':
+        rect(x*wid +10, y*wid +24, 10, 5);
+        break;
+    case 'W':
+        rect(x*wid +2, y*wid +10, 5, 10);
+        break;
+    }
 
     strokeWeight(0); // cuadricula gris
     stroke(0, 50);
@@ -328,25 +345,25 @@ class Robot {
       point((x+xSize)*wid+15, y*wid+15);
       dir = heading;
       strokeWeight(5);
-      switch(heading){
-        case 'N':
-          line((x+xSize)*wid+15, y*wid+15,(x+xSize)*wid+15, (y-1)*wid+15);
-          y--;
-          break;
-  
-        case 'S':
-          line((x+xSize)*wid+15, y*wid+15,(x+xSize)*wid+15, (y+1)*wid+15);
-          y++;
-          break;
-  
-        case 'W':
-          line((x+xSize)*wid+15, y*wid+15,(x-1+xSize)*wid+15, y*wid+15);
-          x--;
-          break;
-  
-        default:
-          line((x+xSize)*wid+15, y*wid+15,(x+1+xSize)*wid+15, y*wid+15);
-          x++;
+      switch(heading) {
+      case 'N':
+        line((x+xSize)*wid+15, y*wid+15, (x+xSize)*wid+15, (y-1)*wid+15);
+        y--;
+        break;
+
+      case 'S':
+        line((x+xSize)*wid+15, y*wid+15, (x+xSize)*wid+15, (y+1)*wid+15);
+        y++;
+        break;
+
+      case 'W':
+        line((x+xSize)*wid+15, y*wid+15, (x-1+xSize)*wid+15, y*wid+15);
+        x--;
+        break;
+
+      default:
+        line((x+xSize)*wid+15, y*wid+15, (x+1+xSize)*wid+15, y*wid+15);
+        x++;
       }
     }
     strokeWeight(15);
@@ -439,7 +456,7 @@ class Robot {
     default : 
       rect(x*wid+4, y*wid+4, wid/6, wid-8);
     }
-    x-=off;
+    if(arena[y][x].victim != 'F')rect(x*wid +5,y*wid +5, 10, 10);
   }
 
   void recorrer() {
@@ -451,9 +468,7 @@ class Robot {
     ignore = false;
 
     if (!check(y, x))search(arena[y][x]);
-    if(!arena[y][x].visited){
-      if(arena[y][x].leftVictim)kits[y][x] = new Kit('L');
-      if(arena[y][x].rightVictim)kits[y][x] = new Kit('R');
+    if (!arena[y][x].visited) {
     }
     if (!ignore) {
       switch (dir) {
@@ -556,45 +571,42 @@ class Robot {
           x++;
         }
       }
-      
-      if(arena[y][x].leftVictim){ kits[y][x] = new Kit('L'); stroke(255, 255, 0, 100); strokeWeight(25); point(x * example.wid, y * example.wid + example.wid/2); frameRate(2);}
-      if(arena[y][x].rightVictim){ kits[y][x] = new Kit('R'); stroke(255, 0, 255, 100); strokeWeight(25); point(x * example.wid + example.wid, y * example.wid + example.wid/2); frameRate(2);}
     }
   }
 }
 
-class Kit{
+class Kit {
   int x, y, wid=6;
-  
-  Kit(char side){
+
+  Kit(char side) {
     x = robot.x * example.wid;
     y = robot.y * example.wid;
-    switch(robot.dir){
-      case 'W':
-        if(side == 'L') y += 15;
-        else y -= 15;
-        break;
-      
-      case 'N':
-        if(side == 'L') x-= 15;
-        else x += 15;
-        break;
-      
-      case 'E':
-        if(side == 'L') y -= 15;
-        else y += 10;
-        break;
-      
-      default:
-        if(side == 'L') x += 15;
-        else x -= 15;
+    switch(robot.dir) {
+    case 'W':
+      if (side == 'L') y += 15;
+      else y -= 15;
+      break;
+
+    case 'N':
+      if (side == 'L') x-= 15;
+      else x += 15;
+      break;
+
+    case 'E':
+      if (side == 'L') y -= 15;
+      else y += 10;
+      break;
+
+    default:
+      if (side == 'L') x += 15;
+      else x -= 15;
     }
   }
-  
-  void dibujar(){
+
+  void dibujar() {
     rectMode(CENTER);
     x += xSize * example.wid;
-    fill(255,0,0,200);
+    fill(255, 0, 0, 200);
     stroke(255, 0, 0);
     strokeWeight(2);
     rect(x+15, y+15, wid, wid);
@@ -605,41 +617,41 @@ class Kit{
 }
 /*
   void stack() {
-   int best = 9999;
-   int bestY = 0, bestX = 0;
-   int bestStack = 0;
-   for (int i = 0; i < ySize; i++) {
-   for (int j = 0; j < xSize; j++) {
-   if (arena[i][j].visited) {
-   if (arena[y][x].stack - arena[i][j].stack < best && check(i, j)) {
-   best = arena[y][x].stack - arena[i][j].stack;
-   bestY = i;
-   bestX = j;
-   bestStack = arena[i][j].stack;
-   }
-   }
-   }
-   }
-   for (int i = 0; i < ySize; i++) {
-   for (int j = 0; j < xSize; j++) {
-   if (arena[i][j].visited && arena[i][j].stack == bestStack+1) {
-   if (i < bestY) {
-   dir = 'S';
-   } else if (i > bestY) {
-   dir = 'N';
-   } else if (j < bestX) {
-   dir = 'E';
-   } else if (j > bestX) {
-   dir = 'W';
-   }
-   }
-   }
-   }
-   x = bestX;
-   y = bestY;
-   if (best  == 9999) {
-   delay(1000);
-   setup();
-   }
-   }
-   */
+ int best = 9999;
+ int bestY = 0, bestX = 0;
+ int bestStack = 0;
+ for (int i = 0; i < ySize; i++) {
+ for (int j = 0; j < xSize; j++) {
+ if (arena[i][j].visited) {
+ if (arena[y][x].stack - arena[i][j].stack < best && check(i, j)) {
+ best = arena[y][x].stack - arena[i][j].stack;
+ bestY = i;
+ bestX = j;
+ bestStack = arena[i][j].stack;
+ }
+ }
+ }
+ }
+ for (int i = 0; i < ySize; i++) {
+ for (int j = 0; j < xSize; j++) {
+ if (arena[i][j].visited && arena[i][j].stack == bestStack+1) {
+ if (i < bestY) {
+ dir = 'S';
+ } else if (i > bestY) {
+ dir = 'N';
+ } else if (j < bestX) {
+ dir = 'E';
+ } else if (j > bestX) {
+ dir = 'W';
+ }
+ }
+ }
+ }
+ x = bestX;
+ y = bestY;
+ if (best  == 9999) {
+ delay(1000);
+ setup();
+ }
+ }
+ */
