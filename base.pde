@@ -1,22 +1,27 @@
-float density = .7; //densidad de dibujado //<>//
+
+float density = .5; //densidad de dibujado //<>//
 float doubleDensity = .2;
 float blackCell = .04; //densidad de celdas negras
+float victimDensity = .05;
 int checkpoint = 2; //densidad de checkpoints
 int xSize;
 int ySize;
 
 Robot robot = new Robot(0,0);
 
+Kit[][] kits;
+
 Cell[][] arena; //crea arena
 Cell example = new Cell(0,0);
 void setup() {
 
-  size(1200, 600); //tamaño pantalla, ahora el doble de ancho
+  size(1500, 750); //tamaño pantalla, ahora el doble de ancho
   //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
   xSize = int((width)/2/example.wid); //determina ancho arena
   ySize = int((height)/example.wid); //determina alto arena
-  frameRate(10);
+  frameRate(60);
   arena = new Cell[ySize][xSize]; //setea tamaño arena al ancho de las arena
+  kits = new Kit[ySize][xSize];
 
   int px, py;
 
@@ -47,12 +52,13 @@ void setup() {
 
 void draw() {
   background(255, 255, 240); //fondo
-  frameRate(4);
+  frameRate(60);
   robot.recorrer();
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
       arena[i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
       if (arena[i][j].visited)arena[i][j].dibujar(xSize);//se replican las baldosas visitadas en la otra mitad de la pantalla.
+      if (kits[i][j] != null) kits[i][j].dibujar();
     }
   }
   robot.dibujar(0);
@@ -71,6 +77,8 @@ class Cell {
   int stack = robot.cont++;
   int weight = 9999;
   boolean out = false;
+  boolean leftVictim = false;
+  boolean rightVictim = false;
   char[] instructions = {};
 
   int x, y, wid = 30;
@@ -94,8 +102,10 @@ class Cell {
     if (bx == xSize-1)//dibuja borde derecho
       east = true; 
 
-    if (random(1)< blackCell)black=true;
-
+    if (random(1) < blackCell)black=true;
+    if (random(1) < victimDensity) rightVictim = true;
+    if (random(1) < victimDensity) leftVictim = true;
+    
     if (random(1) < density) { //pregunta si dibuja o no
       if (random(1) < doubleDensity && (!west || !north)) { //pregunta si dibuja 2 paredes o una
         south = true;
@@ -307,7 +317,7 @@ class Robot {
 
   void follow(Cell target) {
     println("FOLLOWING");
-    if (target.weight == 0 || target.weight > 4)frameRate(.25);
+    if (target.weight == 0 || target.weight > 4)frameRate(2);
     char heading;
     stroke(0, 0, 255);
     strokeWeight(15);
@@ -441,7 +451,10 @@ class Robot {
     ignore = false;
 
     if (!check(y, x))search(arena[y][x]);
-
+    if(!arena[y][x].visited){
+      if(arena[y][x].leftVictim)kits[y][x] = new Kit('L');
+      if(arena[y][x].rightVictim)kits[y][x] = new Kit('R');
+    }
     if (!ignore) {
       switch (dir) {
       case 'N'://está yendo hacia arriba
@@ -543,7 +556,51 @@ class Robot {
           x++;
         }
       }
+      
+      if(arena[y][x].leftVictim){ kits[y][x] = new Kit('L'); stroke(255, 255, 0, 100); strokeWeight(25); point(x * example.wid, y * example.wid + example.wid/2); frameRate(2);}
+      if(arena[y][x].rightVictim){ kits[y][x] = new Kit('R'); stroke(255, 0, 255, 100); strokeWeight(25); point(x * example.wid + example.wid, y * example.wid + example.wid/2); frameRate(2);}
     }
+  }
+}
+
+class Kit{
+  int x, y, wid=6;
+  
+  Kit(char side){
+    x = robot.x * example.wid;
+    y = robot.y * example.wid;
+    switch(robot.dir){
+      case 'W':
+        if(side == 'L') y += 15;
+        else y -= 15;
+        break;
+      
+      case 'N':
+        if(side == 'L') x-= 15;
+        else x += 15;
+        break;
+      
+      case 'E':
+        if(side == 'L') y -= 15;
+        else y += 10;
+        break;
+      
+      default:
+        if(side == 'L') x += 15;
+        else x -= 15;
+    }
+  }
+  
+  void dibujar(){
+    rectMode(CENTER);
+    x += xSize * example.wid;
+    fill(255,0,0,200);
+    stroke(255, 0, 0);
+    strokeWeight(2);
+    rect(x+15, y+15, wid, wid);
+    x -= xSize * example.wid;
+    rect(x+15, y+15, wid, wid);
+    rectMode(CORNER);
   }
 }
 /*
