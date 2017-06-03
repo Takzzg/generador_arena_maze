@@ -1,28 +1,32 @@
 float density = .5; //densidad de dibujado //<>//
 float doubleDensity = .2;
 float blackCell = .04; //densidad de celdas negras
-float victimDensity = .05;
-int checkpoint = 2; //densidad de checkpoints
+float victimDensity = .1;
+float checkpointDensity = .0;//densidad de checkpoints
+float errorProbability = .2;
 int xSize;
 int ySize;
 
 Robot robot = new Robot(0, 0);
 
-Kit[][] kits;
-
 Cell[][] arena; //crea arena
 Cell example = new Cell(0, 0);
 void setup() {
 
-  size(1500, 750); //tamaño pantalla, ahora el doble de ancho
+  size(1200, 600); //tamaño pantalla, ahora el doble de ancho
   xSize = int((width)/2/example.wid); //determina ancho arena
   ySize = int((height)/example.wid); //determina alto arena
   frameRate(60);
   arena = new Cell[ySize][xSize]; //setea tamaño arena al ancho de las arena
-  kits = new Kit[ySize][xSize];
 
   int px, py;
 
+  for (int i = 0; i < ySize; i++) {
+    for (int j = 0; j < xSize; j++) {
+      arena[i][j] = new Cell(j, i); //crea las baldosas
+    }
+  }
+  
   if (random(1) > 0.5) { //posiciona el robot en un borde a una altura random
     if (random(1) > 0.5) px = 0;
     else px = xSize-1;
@@ -32,14 +36,8 @@ void setup() {
     else py = ySize-1;
     px = int(random(xSize));
   }
-
-  for (int i = 0; i < ySize; i++) {
-    for (int j = 0; j < xSize; j++) {
-      arena[i][j] = new Cell(j, i); //crea las baldosas
-    }
-  }
-
   robot = new Robot(px, py);
+  
   arena[py][px].start = true;
   arena[py][px].visited = true;
   robot.start();
@@ -49,13 +47,12 @@ void setup() {
 
 void draw() {
   background(255, 255, 240); //fondo
-  frameRate(60);
+  frameRate(10);
   robot.recorrer();
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
       arena[i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
       if (arena[i][j].visited)arena[i][j].dibujar(xSize);//se replican las baldosas visitadas en la otra mitad de la pantalla.
-      if (kits[i][j] != null) kits[i][j].dibujar();
     }
   }
   robot.dibujar(0);
@@ -71,17 +68,20 @@ class Cell {
   boolean visited = false;
   boolean start = false;
   boolean black = false;
+  boolean checkpoint = false;
+  boolean error = false;
+  boolean out = false;
+  boolean oneKit = false;
+  boolean twoKits = false;
+  char victim = 'F';
+  char victimStatus = 'F';
+  char[] instructions = {};
   int stack = robot.cont++;
   int weight = 9999;
-  boolean out = false;
-  char victim = 'F';
-  char[] instructions = {};
-
   int x, y, wid = 30;
   int px, py;
 
   Cell(int bx, int by) { 
-
     x = bx;
     y = by;
     if (by == 0)//dibuja borde superior
@@ -97,7 +97,9 @@ class Cell {
     if (bx == xSize-1)//dibuja borde derecho
       east = true; 
 
-    if (random(1) < blackCell)black=true;
+    if(random(1) < errorProbability)error = true;
+    if(random(1) < blackCell)black=true;
+    if(random(1) < checkpointDensity)checkpoint=true;
 
     if (random(1) < density) { //pregunta si dibuja o no
       if (random(1) < doubleDensity && (!west || !north)) { //pregunta si dibuja 2 paredes o una
@@ -106,12 +108,15 @@ class Cell {
       } else if (random(1) < 0.5) south = true;//dibuja abajo
       else east = true;//dibuja a la derecha
     }
-    
-    if(random(1) < victimDensity && !black){ //where to place victims (if it does)
-      if(north)victim = 'N';
-      if(east)victim = 'E';
-      if(south)victim = 'S';
-      if(west)victim = 'W';
+
+    if (random(1) < victimDensity && !black && !start) { //where to place victims (if it does)
+      if(random(1) < 0.3)victimStatus = 'U';
+      else if(random(1) < 0.5)victimStatus = 'S';
+      else victimStatus = 'H';
+      if (north)victim = 'N';
+      if (east)victim = 'E';
+      if (south)victim = 'S';
+      if (west)victim = 'W';
     }
   }
 
@@ -125,21 +130,23 @@ class Cell {
     if (south) line(x*wid, (y+1)*wid, (x+1)*wid, (y+1)*wid);//south
     if (west)line(x*wid, y*wid, x*wid, (y+1)*wid);//west
     
-    fill(255,0,0);
+    if(victimStatus == 'H')fill(255, 0, 0);
+    if(victimStatus == 'S')fill(255, 255, 0);
+    if(victimStatus == 'U')fill(0, 255, 0);
     strokeWeight(0);
-    switch(victim){
+    switch(victim) {
     case 'N':
-        rect(x*wid +10, y*wid +2, 10, 5);
-        break;
+      rect(x*wid +10, y*wid +2, 10, 5);
+      break;
     case 'E':
-        rect(x*wid +24, y*wid +10, 5, 10);
-        break;
+      rect(x*wid +24, y*wid +10, 5, 10);
+      break;
     case 'S':
-        rect(x*wid +10, y*wid +24, 10, 5);
-        break;
+      rect(x*wid +10, y*wid +24, 10, 5);
+      break;
     case 'W':
-        rect(x*wid +2, y*wid +10, 5, 10);
-        break;
+      rect(x*wid +2, y*wid +10, 5, 10);
+      break;
     }
 
     strokeWeight(0); // cuadricula gris
@@ -150,46 +157,66 @@ class Cell {
     if (visited) {
       px+=xSize;
       x+=xSize;
-      stroke(50, 170, 50, 100);
       strokeWeight(2);
       fill(50, 170, 50, 50);
+      stroke(50, 170, 50, 100);
       rect(x*wid+6, y*wid+6, wid-12, wid-12);
-      strokeWeight(2);
-      //fill(0);
-      //text(stack, x + 10, y + 20);
-      stroke(0, 0, 255, 100);
-      if (stack>0) line(px*wid + 15, py*wid + 15, x*wid + 15, y*wid + 15);
+      if (stack>0){
+        stroke(0, 0, 255, 100);
+        line(px*wid + 15, py*wid + 15, x*wid + 15, y*wid + 15);
+      }
       px-=xSize;
       x-=xSize;
     }
+    
     if (start) {
       strokeWeight(2);
       fill(0, 255, 0, 200);
       stroke(0, 255, 0);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
+    
     if (black) {
       stroke(0);
       strokeWeight(2);
       fill(0, 200);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
+    
+    if(oneKit){
+      stroke(255,255,0);
+      strokeWeight(2);
+      fill(255,255,0);
+      rect(x*wid+10, y*wid +10, 10, 10);
+    }
+    
+    if(twoKits){
+      stroke(255,255,0);
+      strokeWeight(2);
+      fill(255,255,0);
+      rect(x*wid+5,y*wid+10,7,7);
+      rect(x*wid+17,y*wid+10,7,7);
+    }
+    
+    if(checkpoint){
+      strokeWeight(0);
+      fill(0,0,0,50);
+      rect(x*wid -1, y*wid -1, 30,30);
+    }
     x-=off;
     px-=off;
   }
 }
 
-
 void mousePressed() { //al hacer click refrescar pista
   setup();
 }
 
-
 class Robot {
   int x, y;
   int py, px;
-  char dir;//dir podrá ser 'N','S','E', o 'W', indica la dirección actual del robot.
   int cont;
+  char dir;//dir podrá ser 'N','S','E', o 'W', indica la dirección actual del robot.
   float wid = 30;
   boolean ignore = false;
 
@@ -204,17 +231,14 @@ class Robot {
     case 0:
       dir = 'W';
       break;
-
     case 19:
       dir = 'E';
       break;
-
     default:
       switch(x) {
       case 0:
         dir = 'S';
         break;
-
       default:
         dir = 'N';
       }
@@ -456,11 +480,12 @@ class Robot {
     default : 
       rect(x*wid+4, y*wid+4, wid/6, wid-8);
     }
-    if(arena[y][x].victim != 'F')rect(x*wid +5,y*wid +5, 10, 10);
+    x-=off;
+    if (arena[y][x].victim != 'F' && arena[y][x].oneKit == false && arena[y][x].victimStatus == 'S')arena[y][x].oneKit = true;
+    if (arena[y][x].victim != 'F' && arena[y][x].twoKits == false && arena[y][x].victimStatus == 'H')arena[y][x].twoKits = true;
   }
 
   void recorrer() {
-
     if (!ignore)arena[y][x].stack = cont++;
 
     px = x;
@@ -552,7 +577,6 @@ class Robot {
       default: 
         x--;
       }
-      //delay(200);
       arena[y][x].visited = true;
       arena[y][x].px = px;
       arena[y][x].py = py;
@@ -574,84 +598,3 @@ class Robot {
     }
   }
 }
-
-class Kit {
-  int x, y, wid=6;
-
-  Kit(char side) {
-    x = robot.x * example.wid;
-    y = robot.y * example.wid;
-    switch(robot.dir) {
-    case 'W':
-      if (side == 'L') y += 15;
-      else y -= 15;
-      break;
-
-    case 'N':
-      if (side == 'L') x-= 15;
-      else x += 15;
-      break;
-
-    case 'E':
-      if (side == 'L') y -= 15;
-      else y += 10;
-      break;
-
-    default:
-      if (side == 'L') x += 15;
-      else x -= 15;
-    }
-  }
-
-  void dibujar() {
-    rectMode(CENTER);
-    x += xSize * example.wid;
-    fill(255, 0, 0, 200);
-    stroke(255, 0, 0);
-    strokeWeight(2);
-    rect(x+15, y+15, wid, wid);
-    x -= xSize * example.wid;
-    rect(x+15, y+15, wid, wid);
-    rectMode(CORNER);
-  }
-}
-/*
-  void stack() {
- int best = 9999;
- int bestY = 0, bestX = 0;
- int bestStack = 0;
- for (int i = 0; i < ySize; i++) {
- for (int j = 0; j < xSize; j++) {
- if (arena[i][j].visited) {
- if (arena[y][x].stack - arena[i][j].stack < best && check(i, j)) {
- best = arena[y][x].stack - arena[i][j].stack;
- bestY = i;
- bestX = j;
- bestStack = arena[i][j].stack;
- }
- }
- }
- }
- for (int i = 0; i < ySize; i++) {
- for (int j = 0; j < xSize; j++) {
- if (arena[i][j].visited && arena[i][j].stack == bestStack+1) {
- if (i < bestY) {
- dir = 'S';
- } else if (i > bestY) {
- dir = 'N';
- } else if (j < bestX) {
- dir = 'E';
- } else if (j > bestX) {
- dir = 'W';
- }
- }
- }
- }
- x = bestX;
- y = bestY;
- if (best  == 9999) {
- delay(1000);
- setup();
- }
- }
- */
