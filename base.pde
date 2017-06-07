@@ -205,7 +205,7 @@ class Cell {
     }
     if (check) {
       stroke(255, 200, 200);
-      fill(255, 200, 200, 50);
+      fill(255, 200, 200, 250);
       strokeWeight(2);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
@@ -222,14 +222,13 @@ class Cell {
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
     if (oneKit) {
-      stroke(255, 255, 0);
+      stroke(0, 255, 0);
       strokeWeight(2);
       fill(255, 255, 0);
       rect(x*wid+10, y*wid +10, 10, 10);
     }
-
     if (twoKits) {
-      stroke(255, 255, 0);
+      stroke(0, 255, 0);
       strokeWeight(2);
       fill(255, 255, 0);
       rect(x*wid+5, y*wid+10, 7, 7);
@@ -674,9 +673,11 @@ class Robot {
           lastCheckpoint = arena[z][y][x];
         }
         arena[z][y][x].visited = true;
-        z += floorDir;
-        ignore = true;
-        arena[z][y][x].visited = true;
+        if (z < 5) {
+          z += floorDir;
+          ignore = true;
+          arena[z][y][x].visited = true;
+        }
       }
     }
     if (!arena[z][y][x].check) {
@@ -685,5 +686,6 @@ class Robot {
       history = new Cell[0];
       lastCheckpoint = arena[z][y][x];
     }
+    delay(20);
   }
 }
