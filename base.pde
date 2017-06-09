@@ -22,15 +22,7 @@ void setup() {
 
   int px, py;
 
-  if (random(1) > 0.5) { //posiciona el robot en un borde a una altura random
-    if (random(1) > 0.5) px = 0;
-    else px = xSize-1;
-    py = int(random(ySize));
-  } else {
-    if (random(1) > 0.5) py = 0;
-    else py = ySize-1;
-    px = int(random(xSize));
-  }
+
 
   for (int h = 0; h < 5; h++) {
     for (int i = 0; i < ySize; i++) {
@@ -43,26 +35,45 @@ void setup() {
     int place;
     switch(int(random(4))) {
     case 0:
-      place = int(random(ySize));
+      do {
+        place = int(random(ySize));
+      } while (arena[h][0][place].black || arena[h+1][0][place].black);
       arena[h][0][place].exit = true;
       arena[h+1][0][place].exit = true;
       break;
     case 1:
-      place = int(random(ySize));
+      do {
+        place = int(random(ySize));
+      } while (arena[h][ySize-1][place].black || arena[h+1][ySize-1][place].black);
       arena[h][ySize-1][place].exit = true;
       arena[h+1][ySize-1][place].exit = true;
       break;
     case 2:
-      place = int(random(xSize));
+      do {
+        place = int(random(xSize));
+      } while (arena[h][place][0].black || arena[h+1][place][0].black);
       arena[h][place][0].exit = true;
       arena[h+1][place][0].exit = true;
       break;
     default:
-      place = int(random(xSize));
+      do {
+        place = int(random(xSize));
+      } while (arena[h][place][xSize-1].black || arena[h+1][place][xSize-1].black);
       arena[h][place][xSize-1].exit = true;
       arena[h+1][place][xSize-1].exit = true;
     }
   }
+  do {
+    if (random(1) > 0.5) { //posiciona el robot en un borde a una altura random
+      if (random(1) > 0.5) px = 0;
+      else px = xSize-1;
+      py = int(random(ySize));
+    } else {
+      if (random(1) > 0.5) py = 0;
+      else py = ySize-1;
+      px = int(random(xSize));
+    }
+  } while (arena[0][py][px].black || arena[0][py][px].exit);
 
   robot = new Robot(px, py);
   arena[robot.z][py][px].start = true;
@@ -102,6 +113,7 @@ class Cell {
   boolean start = false;
   boolean black = false;
   boolean exit = false;
+  boolean deleted = false;
   boolean oneKit = false;
   boolean twoKits = false;
   char victim = 'F';
@@ -219,7 +231,13 @@ class Cell {
       strokeWeight(2);
       stroke(0, 0, 255);
       fill(0, 0, 255, 200);
-      rect(x*wid+3, y*wid+3, wid-6, wid-6);
+      rect(x*wid+5, y*wid+5, wid-10, wid-10);
+    }
+    else if(deleted) {
+      strokeWeight(2);
+      stroke(0,0,255);
+      line(x*wid+5, y*wid+5, x*wid+wid-5, y*wid+wid-5);
+      line(x*wid+wid-5, y*wid+5, x*wid+5, y*wid+wid-5);
     }
     if (oneKit) {
       stroke(0, 255, 0);
@@ -267,7 +285,7 @@ class Robot {
   int cont;
   float wid = 30;
   boolean ignore = false;
-  boolean fuckGoBack = false;
+  boolean finishedFloor = false;
   int floorDir = 1;
 
   Robot(int bx, int by) {
@@ -306,7 +324,8 @@ class Robot {
     int amount = 0;//cantidad de celdas en el arreglo
     arena[z][compareFrom.y][compareFrom.x].weight = 0;//el peso de la celda actual es 0
     compareFrom.weight = 0;
-    while ((!check(compareFrom.y, compareFrom.x) && !end()) || (end() && !compareFrom.start && !compareFrom.exit)) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
+    finishedFloor = end();
+    while ((!check(compareFrom.y, compareFrom.x) && !finishedFloor) || (finishedFloor && ((!compareFrom.start && z == 0) || (!compareFrom.exit && z != 0)))) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
       arena[z][compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
       if (!compareFrom.north) {//no hay pared arriba
         if (!arena[z][compareFrom.y-1][compareFrom.x].out && !(arena[z][compareFrom.y-1][compareFrom.x].black && arena[z][compareFrom.y-1][compareFrom.x].visited)) {//la baldosa de arriba no ha sido explorada
@@ -544,26 +563,28 @@ class Robot {
   }
 
   void recorrer() {
-
-    //if (!ignore)arena[z][y][x].stack = cont++;
-    px = x;
-    py = y;
-
     ignore = false;
-
-    if (floorDir == 1 ) if (end()) { 
-      floorDir = -1;
-    }
-
-    if (!check(y, x))
-      if (!arena[z][y][x].exit)search(arena[z][y][x]);
-      else { 
-        z += floorDir;
-        if (floorDir < 0) {
-          arena[z][y][x].exit = false;
+    if (finishedFloor)floorDir = -1;
+    if (!check(y, x)) {
+      if (!arena[z][y][x].exit) {
+        search(arena[z][y][x]);
+      } else if (!finishedFloor) {
+        search(arena[z][y][x]);
+      } else {
+        if (!arena[z][y][x].check) {
+          history = (Cell[])append(history, arena[z][y][x]);
+        } else {
+          history = new Cell[0];
+          lastCheckpoint = arena[z][y][x];
         }
+        z += floorDir;
+        ignore = true;
+        arena[z][y][x].visited = true;
+        arena[z][y][x].exit = false;
+        arena[z][y][x].deleted = true;
+        finishedFloor = false;
       }
-    if (!ignore) {
+    } else {
       switch (dir) {
       case 'N'://está yendo hacia arriba
         if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
@@ -629,63 +650,199 @@ class Robot {
           init();
         }
       }
-    }
-    if (!ignore) {
-      //lo que significa cada dirección en términos de índices
-      switch(dir) {
-      case 'N': 
-        y--; 
-        break;
-      case 'E': 
-        x++; 
-        break;
-      case 'S': 
-        y++; 
-        break;
-      default: 
-        x--;
-      }
-      //delay(200);
-      arena[z][y][x].visited = true;
-      arena[z][y][x].px = px;
-      arena[z][y][x].py = py;
-
-      if (arena[z][y][x].black) {
-        switch (dir) {
+      if (!ignore) {
+        //lo que significa cada dirección en términos de índices
+        switch(dir) {
         case 'N': 
-          y++; 
-          break;
-        case 'E': 
-          x--; 
-          break;
-        case 'S': 
           y--; 
           break;
+        case 'E': 
+          x++; 
+          break;
+        case 'S': 
+          y++; 
+          break;
         default: 
-          x++;
+          x--;
         }
-      }
-      if (arena[z][y][x].exit) {
+        arena[z][y][x].visited = true;
+
         if (!arena[z][y][x].check) {
           history = (Cell[])append(history, arena[z][y][x]);
-        } else {
+        } else { 
           history = new Cell[0];
           lastCheckpoint = arena[z][y][x];
         }
-        arena[z][y][x].visited = true;
-        if (z < 5) {
+        if (arena[z][y][x].black) {
+          switch (dir) {
+          case 'N': 
+            y++; 
+            break;
+          case 'E': 
+            x--; 
+            break;
+          case 'S': 
+            y--; 
+            break;
+          default: 
+            x++;
+          }
+        } else if (arena[z][y][x].exit) {
+          if (!arena[z][y][x].check) {
+            history = (Cell[])append(history, arena[z][y][x]);
+          } else {
+            history = new Cell[0];
+            lastCheckpoint = arena[z][y][x];
+          }
           z += floorDir;
           ignore = true;
           arena[z][y][x].visited = true;
         }
       }
     }
-    if (!arena[z][y][x].check) {
-      history = (Cell[])append(history, arena[z][y][x]);
-    } else { 
-      history = new Cell[0];
-      lastCheckpoint = arena[z][y][x];
-    }
-    delay(20);
+
+    /*//if (!ignore)arena[z][y][x].stack = cont++;
+     px = x;
+     py = y;
+     
+     ignore = false;
+     
+     if (floorDir == 1 ) if (end()) { 
+     floorDir = -1;
+     }
+     
+     if (!check(y, x))
+     if (!arena[z][y][x].exit)search(arena[z][y][x]);
+     else { 
+     z += floorDir;
+     if (floorDir < 0) {
+     arena[z][y][x].exit = false;
+     }
+     }
+     if (!ignore) {
+     switch (dir) {
+     case 'N'://está yendo hacia arriba
+     if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
+     if (!arena[z][y][x+1].visited) {//no está visitada
+     dir = 'E';
+     ignore = true;
+     } else if (arena[z][y][x].north) {//hay una pared al frente
+     init();
+     } else if (arena[z][y-1][x].visited) {
+     init();
+     }
+     } else if (arena[z][y][x].north) {//o una pared al frente
+     init();
+     } else if (arena[z][y-1][x].visited) {
+     init();
+     }
+     break;
+     case 'W'://está yendo hacia la izquierda
+     if (!arena[z][y][x].north) {//y encuentra una baldosa a su derecha
+     if (!arena[z][y-1][x].visited) {
+     dir = 'N';
+     ignore = true;
+     } else if (arena[z][y][x].west) {//o una pared al frente
+     init();
+     } else if (arena[z][y][x-1].visited) {
+     init();
+     }
+     } else if (arena[z][y][x].west) {//o una pared al frente
+     init();
+     } else if (arena[z][y][x-1].visited) {
+     init();
+     }
+     break;
+     case 'S'://está yendo hacia abajo
+     if (!arena[z][y][x].west) {//y encuentra una baldosa a su derecha
+     if (!arena[z][y][x-1].visited) {
+     dir = 'W';
+     ignore = true;
+     } else if (arena[z][y][x].south) {//o una pared al frente
+     init();
+     } else if (arena[z][y+1][x].visited) {
+     init();
+     }
+     } else if (arena[z][y][x].south) {//o una pared al frente
+     init();
+     } else if (arena[z][y+1][x].visited) {
+     init();
+     }
+     break;
+     default:
+     if (!arena[z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
+     if (!arena[z][y+1][x].visited) {
+     dir = 'S';
+     ignore = true;
+     } else if (arena[z][y][x].east) {//o una pared al frente
+     init();
+     } else if (arena[z][y][x+1].visited) {//o está visitada al frente
+     init();
+     }
+     } else if (arena[z][y][x].east) {//o una pared al frente
+     init();
+     } else if (arena[z][y][x+1].visited) {//o está visitada al frente
+     init();
+     }
+     }
+     }
+     if (!ignore) {
+     //lo que significa cada dirección en términos de índices
+     switch(dir) {
+     case 'N': 
+     y--; 
+     break;
+     case 'E': 
+     x++; 
+     break;
+     case 'S': 
+     y++; 
+     break;
+     default: 
+     x--;
+     }
+     //delay(200);
+     arena[z][y][x].visited = true;
+     arena[z][y][x].px = px;
+     arena[z][y][x].py = py;
+     
+     if (arena[z][y][x].black) {
+     switch (dir) {
+     case 'N': 
+     y++; 
+     break;
+     case 'E': 
+     x--; 
+     break;
+     case 'S': 
+     y--; 
+     break;
+     default: 
+     x++;
+     }
+     }
+     if (arena[z][y][x].exit) {
+     if (!arena[z][y][x].check) {
+     history = (Cell[])append(history, arena[z][y][x]);
+     } else {
+     history = new Cell[0];
+     lastCheckpoint = arena[z][y][x];
+     }
+     arena[z][y][x].visited = true;
+     if (z < 5) {
+     z += floorDir;
+     ignore = true;
+     arena[z][y][x].visited = true;
+     }
+     }
+     }
+     if (!arena[z][y][x].check) {
+     history = (Cell[])append(history, arena[z][y][x]);
+     } else { 
+     history = new Cell[0];
+     lastCheckpoint = arena[z][y][x];
+     }
+     delay(20);
+     */
   }
 }
