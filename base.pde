@@ -15,7 +15,7 @@ Cell example = new Cell(0, 0, 0);
 void setup() {
   int px, py;
 
-  size(1200, 600); //screen size
+  size(900, 420); //screen size
   xSize = int((width)/2/example.wid); //arena width
   ySize = int((height)/example.wid); //arena height
   frameRate(60);
@@ -34,25 +34,25 @@ void setup() {
     switch(int(random(4))) { //randomly places the ramps/entrances to the other levels/rooms
 
     case 0: //places an exit at the top of the arena
-      while (arena[h][0][place].black || arena[h+1][0][place].black || place == 0) place = int(random(ySize));
+      while (arena[h][0][place].black || arena[h+1][0][place].black || place == 0) place = int(random(xSize));
       arena[h][0][place].exit = true;
       arena[h+1][0][place].exit = true;
       break;
 
     case 1:  //places an exit a the bottom of the arena
-      while (arena[h][ySize-1][place].black || arena[h+1][ySize-1][place].black || place == 0) place = int(random(ySize));
+      while (arena[h][ySize-1][place].black || arena[h+1][ySize-1][place].black || place == 0) place = int(random(xSize));
       arena[h][ySize-1][place].exit = true;
       arena[h+1][ySize-1][place].exit = true;
       break;
 
     case 2: //places an exit on the left face of the arena
-      while (arena[h][place][0].black || arena[h+1][place][0].black || place == 0) place = int(random(xSize));
+      while (arena[h][place][0].black || arena[h+1][place][0].black || place == 0) place = int(random(ySize));
       arena[h][place][0].exit = true;
       arena[h+1][place][0].exit = true;
       break;
 
     default: //places an exit on the right face of the arena
-      while (arena[h][place][xSize-1].black || arena[h+1][place][xSize-1].black || place == 0) place = int(random(xSize));
+      while (arena[h][place][xSize-1].black || arena[h+1][place][xSize-1].black || place == 0) place = int(random(ySize));
       arena[h][place][xSize-1].exit = true;
       arena[h+1][place][xSize-1].exit = true;
     }
@@ -220,7 +220,7 @@ class Cell {
     }
     if (check) { //if it´s a checkpoint draws a <3 PINK <3 square on top of it
       stroke(255, 200, 200);
-      fill(255, 200, 200, 250);
+      fill(255, 200, 200, 100);
       strokeWeight(2);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
@@ -290,7 +290,6 @@ class Robot {
   float wid = 30;
   char dir; //points in which direction the robot is facing. it can be N, E, W or S.
   int x, y, z;
-  int py, px;
   int floorDir = 1; //set the robot to start exploring upwards (according to the z-axis)
 
   Robot(int bx, int by) { //starting values for the robot
@@ -299,7 +298,7 @@ class Robot {
     z = 0;
   }
 
-  void start() { //sets the direction the robot starts facing to
+  void start() { //sets the direction the robot starts facing at
     switch(y) {
     case 0: //if its on the left edge
       dir = 'W';
@@ -351,42 +350,43 @@ class Robot {
         }
       }
 
-      if (!compareFrom.east && compareFrom.x != xSize-1) {//no hay pared a la derecha
-        if (!arena[z][compareFrom.y][compareFrom.x+1].out && !(arena[z][compareFrom.y][compareFrom.x+1].black && arena[z][compareFrom.y][compareFrom.x+1].visited)) {//la baldosa de la derecha no ha sido explorada
-          compareTo = arena[z][compareFrom.y][compareFrom.x+1];//Se usa para comparar
+      if (!compareFrom.east && compareFrom.x != xSize-1) {//if there's no east wall
+        if (!arena[z][compareFrom.y][compareFrom.x+1].out && !(arena[z][compareFrom.y][compareFrom.x+1].black && arena[z][compareFrom.y][compareFrom.x+1].visited)) {//the right cell hasn't been explored yet
+          compareTo = arena[z][compareFrom.y][compareFrom.x+1];//used to comapre
           if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
             amount++; //amount of options is incremented
-            options = (Cell[])append(options, addOption('E', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
+            options = (Cell[])append(options, addOption('E', compareFrom, compareTo));
           }
         }
       }
 
-      if (!compareFrom.south && compareFrom.y != ySize-1) {//no hay pared abajo
-        if (!arena[z][compareFrom.y+1][compareFrom.x].out && !(arena[z][compareFrom.y+1][compareFrom.x].black && arena[z][compareFrom.y+1][compareFrom.x].visited)) {//la baldosa de abajo no ha sido explorada
-          compareTo = arena[z][compareFrom.y+1][compareFrom.x];//Se usa para comparar
+      if (!compareFrom.south && compareFrom.y != ySize-1) {//if there's no south wall
+        if (!arena[z][compareFrom.y+1][compareFrom.x].out && !(arena[z][compareFrom.y+1][compareFrom.x].black && arena[z][compareFrom.y+1][compareFrom.x].visited)) {//if the south cell hasn't been explored yet
+          compareTo = arena[z][compareFrom.y+1][compareFrom.x];//used to compare
           if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
             amount++; //amount of options is incremented
-            options = (Cell[])append(options, addOption('S', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
+            options = (Cell[])append(options, addOption('S', compareFrom, compareTo));
           }
         }
       }
 
-      if (!compareFrom.west) {//no hay pared a la izquierda
-        if (!arena[z][compareFrom.y][compareFrom.x-1].out && !(arena[z][compareFrom.y][compareFrom.x-1].black && arena[z][compareFrom.y][compareFrom.x-1].visited)) {//la baldosa de la izquierda no ha sido explorada
-          compareTo = arena[z][compareFrom.y][compareFrom.x-1];//Se usa para comparar
+      if (!compareFrom.west) {//if there's no west wall
+        if (!arena[z][compareFrom.y][compareFrom.x-1].out && !(arena[z][compareFrom.y][compareFrom.x-1].black && arena[z][compareFrom.y][compareFrom.x-1].visited)) {//if the west cell hasn't been explored yet
+          compareTo = arena[z][compareFrom.y][compareFrom.x-1];//used to compareSe usa para comparar
           if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
             amount++; //amount of options is incremented
-            options = (Cell[])append(options, addOption('W', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
+            options = (Cell[])append(options, addOption('W', compareFrom, compareTo));
           }
         }
       }
 
       int bestWeight = 9999;
-      for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
+      for (int i = 0; i < amount; i++) {//reads the array to find the lower cost cells
         if (arena[z][options[i].y][options[i].x].weight < bestWeight && !arena[z][options[i].y][options[i].x].out) {
           bestWeight = options[i].weight;
         }
       }
+
       for (int i = 0; i < amount; i++) {
         if (!arena[z][options[i].y][options[i].x].out && arena[z][options[i].y][options[i].x].weight == bestWeight) {
           compareFrom = options[i];
@@ -396,14 +396,10 @@ class Robot {
     }
 
     strokeWeight(15);
-    for (int i = 0; i < amount; i++) {//Se recorre el arreglo para buscar las celdas con el menor costo
-      if (arena[z][options[i].y][options[i].x].out) {
-        stroke(0, 0, 0, 200);
-        point((options[i].x+xSize)*wid+15, options[i].y*wid+15);
-      } else {
-        stroke(255, 0, 0);
-        point((options[i].x+xSize)*wid+15, options[i].y*wid+15);
-      }
+    for (int i = 0; i < amount; i++) {//reads the array to find the lower cost cells
+      if (arena[z][options[i].y][options[i].x].out) stroke(0, 0, 0, 200); //draws the grey spots
+      else stroke(255, 0, 0); //draws the red spots
+      point((options[i].x+xSize)*wid+15, options[i].y*wid+15);
     }
     println(compareFrom.y);
     println(compareFrom.x);
@@ -419,7 +415,7 @@ class Robot {
     ignore = true;
   }
 
-  boolean end() {
+  boolean end() { //checks if the whole room has been visited
     for (int i = 0; i < ySize; i++) {
       for (int j = 0; j < xSize; j++) {
         if (arena[z][i][j].visited && !arena[z][i][j].black) {
@@ -433,17 +429,14 @@ class Robot {
   void follow(Cell target) {
     println("FOLLOWING");
     if (target.weight == 0 || target.weight > 4)frameRate(2);
-    char heading;
-    stroke(0, 0, 255);
-    strokeWeight(15);
+    stroke(0, 0, 255, 255); 
     for (int i = 0; i < target.weight; i++) {
-      println(target.instructions[i]);
-      heading = target.instructions[i];
+      dir = target.instructions[i];
+      println(dir);
       strokeWeight(15);
-      point((x+xSize)*wid+15, y*wid+15);
-      dir = heading;
+      point((x+xSize)*wid+15, y*wid+15); //draws the blue spots
       strokeWeight(5);
-      switch(heading) {
+      switch(dir) { //draws the blue lines
       case 'N':
         line((x+xSize)*wid+15, y*wid+15, (x+xSize)*wid+15, (y-1)*wid+15);
         y--;
@@ -464,13 +457,11 @@ class Robot {
         x++;
       }
     }
-    strokeWeight(15);
-    point((x+xSize)*wid+15, y*wid+15);
   }
 
-  boolean check(int y, int x) {
-    if (!arena[z][y][x].north) {
-      if (!arena[z][y-1][x].visited) {
+  boolean check(int y, int x) {//returns true if at least one neighbour cell isn't explored and there's no wall between the robot and it
+    if (!arena[z][y][x].north) { 
+      if (!arena[z][y-1][x].visited) { 
         return true;
       }
     }
@@ -494,53 +485,41 @@ class Robot {
 
   void init() {
     if (check(y, x)) {
-      switch(dir) {
+      switch(dir) { //if a neighbour cell hasn't been explored yet and there no wall in between, it changes the direction the robot is facing at
+
       case 'N':
         dir = 'W';
-        if (!arena[z][y][x].west) {
-          if (!arena[z][y][x-1].visited) {
-            ignore = true;
-            return;
-          } else init();
-        } else init();
+        if (!arena[z][y][x].west) 
+          if (!arena[z][y][x-1].visited) break;
 
       case 'W':
         dir = 'S';
-        if (!arena[z][y][x].south) {
-          if (!arena[z][y+1][x].visited) {
-            ignore = true;
-            return;
-          } else init();
-        } else init();
+        if (!arena[z][y][x].south) 
+          if (!arena[z][y+1][x].visited) break;
 
       case 'S':
         dir = 'E';
-        if (!arena[z][y][x].east) {
-          if (!arena[z][y][x+1].visited) {
-            ignore = true;
-            return;
-          } else init();
-        } else init();
+        if (!arena[z][y][x].east) 
+          if (!arena[z][y][x+1].visited) break;
 
       case 'E':
         dir = 'N';
-        if (!arena[z][y][x].north) {
-          if (!arena[z][y-1][x].visited) {
-            ignore = true;
-            return;
-          } else init();
-        } else init();
+        if (!arena[z][y][x].north)
+          if (!arena[z][y-1][x].visited) break;
+        init();
       }
+      ignore = true;
     } else ignore = true;
   }
 
-  void dibujar(int off) {
+  void dibujar(int off) { //draws the robot
     x+=off;
     fill(0, 0, 255);
     stroke(0, 0, 255, 60);
     strokeWeight(2);
-    rect(x*wid+4, y*wid+4, wid-8, wid-8);
-    fill(255, 50, 50);
+    rect(x*wid+4, y*wid+4, wid-8, wid-8); //robot's body
+
+    fill(255, 50, 50); //draws the robot's face
     switch(dir) {
     case 'N' : 
       rect(x*wid+4, y*wid+4, wid-8, wid/6); 
@@ -555,82 +534,74 @@ class Robot {
       rect(x*wid+4, y*wid+4, wid/6, wid-8);
     }
     x-=off;
-    if (arena[z][y][x].victim != 'F' && arena[z][y][x].oneKit == false && arena[z][y][x].victimStatus == 'S')arena[z][y][x].oneKit = true;
+    if (arena[z][y][x].victim != 'F' && arena[z][y][x].oneKit == false && arena[z][y][x].victimStatus == 'S')arena[z][y][x].oneKit = true; //places the kits whe a victim is found
     if (arena[z][y][x].victim != 'F' && arena[z][y][x].twoKits == false && arena[z][y][x].victimStatus == 'H')arena[z][y][x].twoKits = true;
   }
 
-  void changeDir() {
+  void changeDir() { //changes robot's direction
+    boolean f = false;
     switch (dir) {
-    case 'N'://está yendo hacia arriba
-      if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
-        if (!arena[z][y][x+1].visited) {//no está visitada
+
+    case 'N'://it's going north
+      if (!arena[z][y][x].east) {//if the east cell isn't explored and has no wall in between
+        if (!arena[z][y][x+1].visited) {
           dir = 'E';
           ignore = true;
-        } else if (arena[z][y][x].north) {//hay una pared al frente
-          init();
-        } else if (arena[z][y-1][x].visited) {
-          init();
+          f = true;
         }
-      } else if (arena[z][y][x].north) {//o una pared al frente
-        init();
-      } else if (arena[z][y-1][x].visited) {
-        init();
+      } 
+      if (f != true) { //else if the north cell hasn't been explored and has no wall between
+        if (arena[z][y][x].north) init(); 
+        else if (arena[z][y-1][x].visited)init();
       }
       break;
-    case 'W'://está yendo hacia la izquierda
-      if (!arena[z][y][x].north) {//y encuentra una baldosa a su derecha
+
+    case 'W'://it's going left
+      if (!arena[z][y][x].north) {//if the north cell isn't explored and has no wall in between
         if (!arena[z][y-1][x].visited) {
           dir = 'N';
           ignore = true;
-        } else if (arena[z][y][x].west) {//o una pared al frente
-          init();
-        } else if (arena[z][y][x-1].visited) {
-          init();
+          f = true;
         }
-      } else if (arena[z][y][x].west) {//o una pared al frente
-        init();
-      } else if (arena[z][y][x-1].visited) {
-        init();
+      }
+      if (f != true) { //else if the west cell hasn't been explored and has no wall between
+        if (arena[z][y][x].west) init(); 
+        else if (arena[z][y][x-1].visited)init();
       }
       break;
-    case 'S'://está yendo hacia abajo
-      if (!arena[z][y][x].west) {//y encuentra una baldosa a su derecha
+
+    case 'S'://it's going down
+      if (!arena[z][y][x].west) {//if the west cell isn't explored and has no wall in between
         if (!arena[z][y][x-1].visited) {
           dir = 'W';
           ignore = true;
-        } else if (arena[z][y][x].south) {//o una pared al frente
-          init();
-        } else if (arena[z][y+1][x].visited) {
-          init();
+          f = true;
         }
-      } else if (arena[z][y][x].south) {//o una pared al frente
-        init();
-      } else if (arena[z][y+1][x].visited) {
-        init();
+      }
+      if (f != true) { //else if the south cell hasn't been explored and has no wall between
+        if (arena[z][y][x].south) init();
+        else if (arena[z][y+1][x].visited)init();
       }
       break;
-    default:
-      if (!arena[z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
+
+    default: //it's going right
+      if (!arena[z][y][x].south) {//if the south cell isn't explored and has no wall in between
         if (!arena[z][y+1][x].visited) {
           dir = 'S';
           ignore = true;
-        } else if (arena[z][y][x].east) {//o una pared al frente
-          init();
-        } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-          init();
+          f = true;
         }
-      } else if (arena[z][y][x].east) {//o una pared al frente
-        init();
-      } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-        init();
+      }
+      if (f != true) { //else if the east cell hasn't been explored and has no wall between
+        if (arena[z][y][x].east) init();
+        else if (arena[z][y][x+1].visited)init();
       }
     }
   }
 
   void run() {
     {
-      //lo que significa cada dirección en términos de índices
-      switch(dir) {
+      switch(dir) { //what indexes the characters refer to
       case 'N': 
         y--; 
         break;
@@ -643,15 +614,15 @@ class Robot {
       default: 
         x--;
       }
-      arena[z][y][x].visited = true;
-
-      if (!arena[z][y][x].check) {
-        history = (Cell[])append(history, arena[z][y][x]);
-      } else { 
+      
+      arena[z][y][x].visited = true; //sets the current cell as visited
+      if (!arena[z][y][x].check) history = (Cell[])append(history, arena[z][y][x]); //if it's not a checkpoint, it's added to the history of visited cells
+      else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
         history = new Cell[0];
         lastCheckpoint = arena[z][y][x];
       }
-      if (arena[z][y][x].black) {
+      
+      if (arena[z][y][x].black) { //if it founds a black cell, it'll go back
         switch (dir) {
         case 'N': 
           y++; 
@@ -665,10 +636,11 @@ class Robot {
         default: 
           x++;
         }
-      } else if (arena[z][y][x].exit) {
-        if (!arena[z][y][x].check) {
-          history = (Cell[])append(history, arena[z][y][x]);
-        } else {
+      }
+      
+      if (arena[z][y][x].exit) { //if it founds an exit
+        if (!arena[z][y][x].check) history = (Cell[])append(history, arena[z][y][x]); //and the room isn't completed yet, it just adds it to the history 
+        else { //if the room's fully explored, it restarts the history and sets it as the last checkpoint
           history = new Cell[0];
           lastCheckpoint = arena[z][y][x];
         }
@@ -681,30 +653,26 @@ class Robot {
 
   void recorrer() {
     ignore = false;
-    if (finishedFloor)floorDir = -1;
-    if (!check(y, x)) {
-      if (!arena[z][y][x].exit) {
-        search(arena[z][y][x]);
-      } else if (!finishedFloor) {
-        search(arena[z][y][x]);
-      } else {
-        if (!arena[z][y][x].check) {
-          history = (Cell[])append(history, arena[z][y][x]);
-        } else {
+    if (finishedFloor)floorDir = -1; //if it completed a room and has no ramps going up, sets the robot to go down (as to the z-axis)
+    if (!check(y, x)) { //if the room hasn't been fully explored
+      if (!arena[z][y][x].exit) search(arena[z][y][x]); //if it founds a ramp or the room isn't finished it'll continue exploring the room
+      else if (!finishedFloor) search(arena[z][y][x]); 
+      else {
+        if (!arena[z][y][x].check) history = (Cell[])append(history, arena[z][y][x]); //if it isn't on a checkpoint, it'll add the cell to the history
+        else { //if it founds a checkpoint, it'll reset the history and set it as the last visited checkpoint
           history = new Cell[0];
           lastCheckpoint = arena[z][y][x];
         }
         z += floorDir;
         ignore = true;
-        arena[z][y][x].visited = true;
+        arena[z][y][x].visited = true; //sets the cell as visited
         arena[z][y][x].exit = false;
         arena[z][y][x].deleted = true;
         finishedFloor = false;
       }
-    } else {
-
+    } 
+    else {
       changeDir();
-
       if (!ignore) run();
     }
   }
