@@ -1,70 +1,65 @@
-float density = .5; //densidad de dibujado //<>//
-float doubleDensity = .2;
-float blackCell = .03; //densidad de celdas negras
-float victimDensity = .1;
-float checkpoint = .015; //densidad de checkpoints
+float density = .5; //walls density
+float doubleDensity = .2; //double walls in a cell density
+float blackCell = .03; //black cells density
+float victimDensity = .2; //victims density
+float checkpoint = .015; //checkpoint density
 int xSize;
 int ySize;
 
 Robot robot = new Robot(0, 0);
 Cell lastCheckpoint = new Cell(0, 0, 0);
 Cell[] history = new Cell[0];
-Cell[][][] arena; //crea arena
+Cell[][][] arena; //creates arena
 Cell example = new Cell(0, 0, 0);
+//--------------------------------------------------------------------------------  SETUP  ----------------------------------------------------------------------------
 void setup() {
-
-  size(1200, 600); //tamaño pantalla, ahora el doble de ancho
-  //habría que destinar la mitad derecha de la pantalla para mostrar la pista desde el punto de vista del robot
-  xSize = int((width)/2/example.wid); //determina ancho arena
-  ySize = int((height)/example.wid); //determina alto arena
-  frameRate(60);
-  arena = new Cell[5][ySize][xSize]; //setea tamaño arena al ancho de las arena
-
   int px, py;
 
-
+  size(1200, 600); //screen size
+  xSize = int((width)/2/example.wid); //arena width
+  ySize = int((height)/example.wid); //arena height
+  frameRate(60);
+  arena = new Cell[5][ySize][xSize]; //bigger arena = bigger cells
 
   for (int h = 0; h < 5; h++) {
     for (int i = 0; i < ySize; i++) {
       for (int j = 0; j < xSize; j++) {
-        arena[h][i][j] = new Cell(h, j, i); //crea las baldosas
+        arena[h][i][j] = new Cell(h, j, i); //creates the cells
       }
     }
   }
+
   for (int h = 0; h < 4; h++) {
-    int place;
-    switch(int(random(4))) {
-    case 0:
-      do {
-        place = int(random(ySize));
-      } while (arena[h][0][place].black || arena[h+1][0][place].black);
+    int place = 0;
+    switch(int(random(4))) { //randomly places the ramps/entrances to the other levels/rooms
+
+    case 0: //places an exit at the top of the arena
+      while (arena[h][0][place].black || arena[h+1][0][place].black || place == 0) place = int(random(ySize));
       arena[h][0][place].exit = true;
       arena[h+1][0][place].exit = true;
       break;
-    case 1:
-      do {
-        place = int(random(ySize));
-      } while (arena[h][ySize-1][place].black || arena[h+1][ySize-1][place].black);
+
+    case 1:  //places an exit a the bottom of the arena
+      while (arena[h][ySize-1][place].black || arena[h+1][ySize-1][place].black || place == 0) place = int(random(ySize));
       arena[h][ySize-1][place].exit = true;
       arena[h+1][ySize-1][place].exit = true;
       break;
-    case 2:
-      do {
-        place = int(random(xSize));
-      } while (arena[h][place][0].black || arena[h+1][place][0].black);
+
+    case 2: //places an exit on the left face of the arena
+      while (arena[h][place][0].black || arena[h+1][place][0].black || place == 0) place = int(random(xSize));
       arena[h][place][0].exit = true;
       arena[h+1][place][0].exit = true;
       break;
-    default:
-      do {
-        place = int(random(xSize));
-      } while (arena[h][place][xSize-1].black || arena[h+1][place][xSize-1].black);
+
+    default: //places an exit on the right face of the arena
+      while (arena[h][place][xSize-1].black || arena[h+1][place][xSize-1].black || place == 0) place = int(random(xSize));
       arena[h][place][xSize-1].exit = true;
       arena[h+1][place][xSize-1].exit = true;
     }
   }
-  do {
-    if (random(1) > 0.5) { //posiciona el robot en un borde a una altura random
+
+  do { //places the robot on an empty cell at a random height next to a random wall
+    if (random(1) > 0.5) {
       if (random(1) > 0.5) px = 0;
       else px = xSize-1;
       py = int(random(ySize));
@@ -74,41 +69,43 @@ void setup() {
       px = int(random(xSize));
     }
   } while (arena[0][py][px].black || arena[0][py][px].exit);
-
   robot = new Robot(px, py);
-  arena[robot.z][py][px].start = true;
-  arena[robot.z][py][px].visited = true;
-  robot.start();
-  robot.dibujar(0);
-  robot.dibujar(xSize);
-  lastCheckpoint = arena[robot.z][py][px];
+
+  arena[robot.z][py][px].start = true; //sets the cell where the robot starts as the start cell
+  arena[robot.z][py][px].visited = true; //sets the start cell as visited
+  robot.start(); //starts the robot
+  robot.dibujar(0); //draws the robot in the arena
+  robot.dibujar(xSize); //draws the robot's path on the right of the screen
+  lastCheckpoint = arena[robot.z][py][px]; //sets the starting cell as the last checkpoint visited
 }
-
-
+//--------------------------------------------------------------------------------  SETUP  ----------------------------------------------------------------------------
+//--------------------------------------------------------------------------------  DRAW  ----------------------------------------------------------------------------
 void draw() {
-  background(255, 255, 240); //fondo
+  background(255, 255, 240); //background color
   frameRate(60);
-  fill(0);
-  text(robot.z, 20, 20);
-  text(robot.floorDir, 20, 40);
-  robot.recorrer();
+  fill(0); 
+  text(robot.z, 20, 20); //shows the floor number 
+  text(robot.floorDir, 20, 40); //shows the direccion the robot is going (up or down according to z)
+  robot.recorrer(); 
+
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
-      arena[robot.z][i][j].dibujar(0); //dibuja las baldosas, ahora con un parámetro
-      if (arena[robot.z][i][j].visited)arena[robot.z][i][j].dibujar(xSize);//se replican las baldosas visitadas en la otra mitad de la pantalla.
+      arena[robot.z][i][j].dibujar(0); //draws the cells
+      if (arena[robot.z][i][j].visited)arena[robot.z][i][j].dibujar(xSize); //visited cells duplicate on the right of the screen
     }
   }
-  robot.dibujar(0);
+
+  robot.dibujar(0); //draws the robot in both sides of the screen
   robot.dibujar(xSize);
 }
-
-
+//--------------------------------------------------------------------------------  DRAW  ----------------------------------------------------------------------------
+//--------------------------------------------------------------------------------  CELL  ----------------------------------------------------------------------------
 class Cell {
-  boolean north = false; //resetea todas las paredes para la baldosa nueva
+  boolean north = false; //sets all cell´s variables to false (= blank cell)
   boolean south = false;
-  boolean check = false;
   boolean east = false;
   boolean west = false;
+  boolean check = false;
   boolean visited = false;
   boolean start = false;
   boolean black = false;
@@ -116,136 +113,142 @@ class Cell {
   boolean deleted = false;
   boolean oneKit = false;
   boolean twoKits = false;
+  boolean out = false;
   char victim = 'F';
   char victimStatus = 'F';
-  int stack = robot.cont++;
-  int weight = 9999;
-  boolean out = false;
   char[] instructions = {};
-
-  int x, y, z, wid = 30;
+  int weight = 9999; //sets a sealing for the weight to compare to
+  int x, y, z, wid = 30; //wid = width of the cells
   int px, py;
 
   Cell(int bz, int bx, int by) { 
-
     x = bx;
     y = by;
     z = bz;
-    //px = x/wid;
-    if (by == 0)//dibuja borde superior
+    if (by == 0)//draws a wall all along the top side of the arena
       north = true;
-    else if (arena[z][by-1][bx].south) //sino si la baldosa superior tiene una pared en sur 
+    else if (arena[z][by-1][bx].south) //also draws a north wall if the cell above the current one has a south wall
       north = true;
-    if (bx == 0)//dibuja borde izquierdo
+    if (bx == 0)//draws a wall all along the left side of the arena
       west = true;
-    else if (arena[z][by][bx-1].east) //sino si la baldosa a su izquierda tiene una pared este
+    else if (arena[z][by][bx-1].east) //also draws a left wall if the cell to the right of the current one has a right wall
       west = true;
-    if (by == ySize-1)//dibuja borde inferior
+    if (by == ySize-1)//draws a wall all along the bottom of the arena
       south = true;
-    if (bx == xSize-1)//dibuja borde derecho
+    if (bx == xSize-1)//draws a wall all along the right side of the arena
       east = true; 
 
-    if (random(1) < blackCell)black=true;
-    if (random(1) < density) { //pregunta si dibuja o no
-      if (random(1) < doubleDensity && (!west || !north)) { //pregunta si dibuja 2 paredes o una
+    if (random(1) < blackCell) black=true; //randomly makes black cells
+    if (random(1) < checkpoint) check = true; //randomly makes checkpoints
+
+    if (random(1) < density) { //randomly draws walls on the cells
+      if (random(1) < doubleDensity && (!west || !north)) { //if true the cell has both south and west walls
         south = true;
         east = true;
-      } else if (random(1) < 0.5) south = true;//dibuja abajo
-      else east = true;//dibuja a la derecha
+      } else if (random(1) < 0.5) south = true;//else if true only has a south wall
+      else east = true;//else only has a west wall
     }
 
-    if (random(1) < victimDensity && !black && !start) { //where to place victims (if it does)
-      if (random(1) < 0.3)victimStatus = 'U';
-      else if (random(1) < 0.5)victimStatus = 'S';
-      else victimStatus = 'H';
-      if (north)victim = 'N';
-      if (east)victim = 'E';
-      if (south)victim = 'S';
-      if (west)victim = 'W';
-    }
-
-    if (random(1) < checkpoint) {
-      check = true;
+    if (random(1) < victimDensity && !black && !start && !check) { //randomly places victims on the cells
+      if (random(1) < 0.3)victimStatus = 'U'; //if true the victim´s status is UNHARMED
+      else if (random(1) < 0.5)victimStatus = 'S'; //if true the victim´s status is STABLE
+      else victimStatus = 'H'; //else the victim's status is HARMED
+      int w = int(random(4));
+      switch(w) { //randomly decides in which wall the victim is going to be placed
+      case 1:
+        victim = 'N';
+        if (north)break;
+      case 2:
+        victim = 'E';
+        if (east)break;
+      case 3:
+        victim = 'S';
+        if (south)break;
+      default:
+        victim = 'W';
+        if (!west)victim = 'F';
+      }
     }
   }
 
-  void dibujar(int off) {//off es un parámetro que indica un desfazaje al pedir el dibujo de la baldosa. Se suma a x y después se revierte al salir.
+  void dibujar(int off) {//draws the cells. off is the offset where the cell must be drawn (it's added to x and substracted before ending)
     x+=off;
     px+=off;
     strokeWeight(2);
     stroke(0);
-    if (north)line(x*wid, y*wid, (x+1)*wid, y*wid);//north
-    if (east)line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);//east
-    if (south) line(x*wid, (y+1)*wid, (x+1)*wid, (y+1)*wid);//south
-    if (west)line(x*wid, y*wid, x*wid, (y+1)*wid);//west
+    if (north)line(x*wid, y*wid, (x+1)*wid, y*wid);//north wall
+    if (east)line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);//east wall
+    if (south) line(x*wid, (y+1)*wid, (x+1)*wid, (y+1)*wid);//south wall
+    if (west)line(x*wid, y*wid, x*wid, (y+1)*wid);//west wall
 
-    strokeWeight(0); // cuadricula gris
+    strokeWeight(0); //grey grid
     stroke(0, 50);
-    line(x*wid, y*wid, (x+1)*wid, y*wid);
-    line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);
+    if (!north) line(x*wid, y*wid, (x+1)*wid, y*wid);
+    if (!east) line((x+1)*wid, y*wid, (x+1)*wid, (y+1)*wid);
 
-    if (victimStatus == 'H')fill(255, 0, 0);
-    if (victimStatus == 'S')fill(255, 255, 0);
-    if (victimStatus == 'U')fill(0, 255, 0);
-    strokeWeight(0);
-    switch(victim) {
-    case 'N':
-      rect(x*wid +10, y*wid +2, 10, 5);
-      break;
-    case 'E':
-      rect(x*wid +24, y*wid +10, 5, 10);
-      break;
-    case 'S':
-      rect(x*wid +10, y*wid +24, 10, 5);
-      break;
-    case 'W':
-      rect(x*wid +2, y*wid +10, 5, 10);
-      break;
+    if (victimStatus != 'F') { //if there's a victim
+      if (victimStatus == 'H')fill(255, 0, 0); //sets the color for the victim
+      if (victimStatus == 'S')fill(255, 255, 0);
+      if (victimStatus == 'U')fill(0, 255, 0);
+      strokeWeight(0);
+      switch(victim) { //and draws it
+      case 'N':
+        rect(x*wid +10, y*wid +2, 10, 5);
+        break;
+      case 'E':
+        rect(x*wid +24, y*wid +10, 5, 10);
+        break;
+      case 'S':
+        rect(x*wid +10, y*wid +24, 10, 5);
+        break;
+      case 'W':
+        rect(x*wid +2, y*wid +10, 5, 10);
+      }
     }
 
-    if (visited && off != 0) {
+    if (visited && off != 0) { //if the cell is visited draws a green square on top of it on the right side of the screen
       stroke(50, 170, 50, 100);
       strokeWeight(2);
       fill(50, 170, 50, 50);
       rect(x*wid+6, y*wid+6, wid-12, wid-12);
     }
-    if (start) {
+    if (start) { //if it's the starting cell, draws a bright green square on top of it
       strokeWeight(2);
       fill(0, 255, 0, 200);
       stroke(0, 255, 0);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
-    if (check) {
+    if (check) { //if it´s a checkpoint draws a <3 PINK <3 square on top of it
       stroke(255, 200, 200);
       fill(255, 200, 200, 250);
       strokeWeight(2);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
-    if (black) {
+    if (black) { //if it's a black cell, draws a clack square on top of it
       stroke(0);
       strokeWeight(2);
       fill(0, 200);
       rect(x*wid+3, y*wid+3, wid-6, wid-6);
     }
-    if (exit) {
+    if (exit) { //if it's an exit, draws a bright blue square on top of it
       strokeWeight(2);
       stroke(0, 0, 255);
       fill(0, 0, 255, 200);
       rect(x*wid+5, y*wid+5, wid-10, wid-10);
-    }
-    else if(deleted) {
+    } 
+    if (deleted) { //if the exit has been deleted, draws a bright blue X where the exit was
       strokeWeight(2);
-      stroke(0,0,255);
+      stroke(0, 0, 255);
       line(x*wid+5, y*wid+5, x*wid+wid-5, y*wid+wid-5);
       line(x*wid+wid-5, y*wid+5, x*wid+5, y*wid+wid-5);
     }
-    if (oneKit) {
+    if (oneKit) { //if the robot placed a kit on this cell, a small green and yellow square will appear 
       stroke(0, 255, 0);
       strokeWeight(2);
       fill(255, 255, 0);
       rect(x*wid+10, y*wid +10, 10, 10);
     }
-    if (twoKits) {
+    if (twoKits) { //if the robot placed two kits here, two smaller green and yellow squares will appear
       stroke(0, 255, 0);
       strokeWeight(2);
       fill(255, 255, 0);
@@ -256,12 +259,14 @@ class Cell {
     px-=off;
   }
 }
-
-
-void mousePressed() { //al hacer click refrescar pista
+//--------------------------------------------------------------------------------  CELL  ----------------------------------------------------------------------------
+//----------------------------------------------------------------------------  MOUSE PRESSED  ----------------------------------------------------------------------------
+void mousePressed() { //clicking on the arena refreshes it
   setup();
 }
-void keyPressed() {
+//----------------------------------------------------------------------------  MOUSE PRESSED  ----------------------------------------------------------------------------
+//-----------------------------------------------------------------------------  KEY PRESSED  ----------------------------------------------------------------------------
+void keyPressed() { //if a key is pressed the robot will return to the last checkpoint visited, forgeting anything learnt after it
   for (int h = 0; h < 5; h++) {
     for (int i = 0; i < ySize; i++) {
       for (int j = 0; j < xSize; j++) {
@@ -277,109 +282,101 @@ void keyPressed() {
     }
   }
 }
-
+//-----------------------------------------------------------------------------  KEY PRESSED  ----------------------------------------------------------------------------
+//--------------------------------------------------------------------------------  ROBOT  ----------------------------------------------------------------------------
 class Robot {
+  boolean finishedFloor = false;
+  boolean ignore = false;
+  float wid = 30;
+  char dir; //points in which direction the robot is facing. it can be N, E, W or S.
   int x, y, z;
   int py, px;
-  char dir;//dir podrá ser 'N','S','E', o 'W', indica la dirección actual del robot.
-  int cont;
-  float wid = 30;
-  boolean ignore = false;
-  boolean finishedFloor = false;
-  int floorDir = 1;
+  int floorDir = 1; //set the robot to start exploring upwards (according to the z-axis)
 
-  Robot(int bx, int by) {
-    cont = 0;
+  Robot(int bx, int by) { //starting values for the robot
     x = bx;
     y = by;
     z = 0;
   }
 
-  void start() {
+  void start() { //sets the direction the robot starts facing to
     switch(y) {
-    case 0:
+    case 0: //if its on the left edge
       dir = 'W';
       break;
 
-    case 19:
+    case 19: //if it's on th right edge
       dir = 'E';
       break;
 
-    default:
-      switch(x) {
+    default: //else
+      switch(x) { //if it's on the top edge
       case 0:
         dir = 'S';
         break;
 
-      default:
+      default: //else (south edge)
         dir = 'N';
       }
     }
   }
 
+  Cell addOption(char a, Cell compareFrom, Cell compareTo) {
+    compareTo.weight = compareFrom.weight+1; //changes it's weight
+    compareTo.instructions = compareFrom.instructions; //instructions to get to compareFrom are copied
+    compareTo.instructions = append(compareTo.instructions, a); //an extra instruction to get to compareFrom is added
+    arena[z][compareTo.y][compareTo.x] = compareTo;//the matrix is updated with the newest information
+    return compareTo;
+  }
+
   void search(Cell compareFrom) {
     println("SEARCHING...");
-    Cell compareTo;// = compareFrom;//Celda que será vista desde compareFrom
-    Cell[] options = new Cell[0];//array de opciones que almacena las celdas desde las que se podría comparar después
-    int amount = 0;//cantidad de celdas en el arreglo
-    arena[z][compareFrom.y][compareFrom.x].weight = 0;//el peso de la celda actual es 0
+    Cell compareTo = new Cell(0, 0, 0);//cell it's going to be visited from compareFrom
+    Cell[] options = new Cell[0];//array which stores the cells that later can be used to compare from
+    arena[z][compareFrom.y][compareFrom.x].weight = 0;//current cell's value is 0
     compareFrom.weight = 0;
     finishedFloor = end();
-    while ((!check(compareFrom.y, compareFrom.x) && !finishedFloor) || (finishedFloor && ((!compareFrom.start && z == 0) || (!compareFrom.exit && z != 0)))) {//hasta que se empiece a comparar desde una celda con vecinos sin visitar.
-      arena[z][compareFrom.y][compareFrom.x].out = true;//Se marca la baldosa en la matriz
-      if (!compareFrom.north) {//no hay pared arriba
-        if (!arena[z][compareFrom.y-1][compareFrom.x].out && !(arena[z][compareFrom.y-1][compareFrom.x].black && arena[z][compareFrom.y-1][compareFrom.x].visited)) {//la baldosa de arriba no ha sido explorada
-          compareTo = arena[z][compareFrom.y-1][compareFrom.x];//Se usa para comparar
-          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
-            compareTo.weight = compareFrom.weight+1;//Se cambia su peso
-            compareTo.instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            compareTo.instructions = append(compareTo.instructions, 'N');//Se añade una instrucción más para llegar a compareTo
-            options = (Cell[])append(options, compareTo);//Se añade a las opciones para explorar más tarde
-            amount++;//Se suma 1 a la cantidad de opciones
-            arena[z][compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
+    int amount = 0;//amount of cells in the array
+
+    while ((!check(compareFrom.y, compareFrom.x) && !finishedFloor) || (finishedFloor && ((!compareFrom.start && z == 0) || (!compareFrom.exit && z != 0)))) {//until it starts comparing from a cell with unvisited neighbours
+      arena[z][compareFrom.y][compareFrom.x].out = true;//the cell is marked on the matrix
+
+      if (!compareFrom.north) {//if there's no north wall
+        if (!arena[z][compareFrom.y-1][compareFrom.x].out && !(arena[z][compareFrom.y-1][compareFrom.x].black && arena[z][compareFrom.y-1][compareFrom.x].visited)) {//if the north cell hasn't been explored
+          compareTo = arena[z][compareFrom.y-1][compareFrom.x];//it's used to compare
+          if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+            amount++; //amount of options is incremented
+            options = (Cell[])append(options, addOption('N', compareFrom, compareTo));
           }
         }
       }
+
       if (!compareFrom.east && compareFrom.x != xSize-1) {//no hay pared a la derecha
         if (!arena[z][compareFrom.y][compareFrom.x+1].out && !(arena[z][compareFrom.y][compareFrom.x+1].black && arena[z][compareFrom.y][compareFrom.x+1].visited)) {//la baldosa de la derecha no ha sido explorada
           compareTo = arena[z][compareFrom.y][compareFrom.x+1];//Se usa para comparar
-          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
-            compareTo.weight = compareFrom.weight+1;//Se cambia su peso
-            compareTo.instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            compareTo.instructions = append(compareTo.instructions, 'E');//Se añade una instrucción más para llegar a compareTo
-            options = (Cell[])append(options, compareTo);//Se añade a las opciones para explorar más tarde
-            amount++;//Se suma 1 a la cantidad de opciones
-            arena[z][compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
+          if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+            amount++; //amount of options is incremented
+            options = (Cell[])append(options, addOption('E', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
           }
         }
       }
+
       if (!compareFrom.south && compareFrom.y != ySize-1) {//no hay pared abajo
         if (!arena[z][compareFrom.y+1][compareFrom.x].out && !(arena[z][compareFrom.y+1][compareFrom.x].black && arena[z][compareFrom.y+1][compareFrom.x].visited)) {//la baldosa de abajo no ha sido explorada
           compareTo = arena[z][compareFrom.y+1][compareFrom.x];//Se usa para comparar
-          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
-            compareTo.weight = compareFrom.weight+1;//Se cambia su peso
-            compareTo.instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            compareTo.instructions = append(compareTo.instructions, 'S');//Se añade una instrucción más para llegar a compareTo
-            options = (Cell[])append(options, compareTo);//Se añade a las opciones para explorar más tarde
-            amount++;//Se suma 1 a la cantidad de opciones
-            arena[z][compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
+          if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+            amount++; //amount of options is incremented
+            options = (Cell[])append(options, addOption('S', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
           }
         }
       }
+
       if (!compareFrom.west) {//no hay pared a la izquierda
         if (!arena[z][compareFrom.y][compareFrom.x-1].out && !(arena[z][compareFrom.y][compareFrom.x-1].black && arena[z][compareFrom.y][compareFrom.x-1].visited)) {//la baldosa de la izquierda no ha sido explorada
           compareTo = arena[z][compareFrom.y][compareFrom.x-1];//Se usa para comparar
-          //stroke(0, 0, 150);
-          //strokeWeight(15);
-          //point((compareFrom.x+xSize)*wid+15, compareTo.y*wid+15);
-          if (compareFrom.weight+1 < compareTo.weight) {//Viajar desde el lugar actual hacia allá es mejor que desde el lugar anterior
-            compareTo.weight = compareFrom.weight+1;//Se cambia su peso
-            compareTo.instructions = compareFrom.instructions;//Se copian las instrucciones para llegar a compareFrom
-            compareTo.instructions = append(compareTo.instructions, 'W');//Se añade una instrucción más para llegar a compareTo
-            options = (Cell[])append(options, compareTo);
-            ;//Se añade a las opciones para explorar más tarde
-            amount++;//Se suma 1 a la cantidad de opciones
-            arena[z][compareTo.y][compareTo.x] = compareTo;//Se actualiza la matriz con la nueva información
+          if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+            amount++; //amount of options is incremented
+            options = (Cell[])append(options, addOption('W', compareFrom, compareTo));//Sugerencia: hace que esto devuelva una celda, que la función no acepte el último parámetro y cambia esta línea a options = (Cell[])append('W', options, addOption(compareFrom, compareTo))
           }
         }
       }
@@ -562,6 +559,126 @@ class Robot {
     if (arena[z][y][x].victim != 'F' && arena[z][y][x].twoKits == false && arena[z][y][x].victimStatus == 'H')arena[z][y][x].twoKits = true;
   }
 
+  void changeDir() {
+    switch (dir) {
+    case 'N'://está yendo hacia arriba
+      if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
+        if (!arena[z][y][x+1].visited) {//no está visitada
+          dir = 'E';
+          ignore = true;
+        } else if (arena[z][y][x].north) {//hay una pared al frente
+          init();
+        } else if (arena[z][y-1][x].visited) {
+          init();
+        }
+      } else if (arena[z][y][x].north) {//o una pared al frente
+        init();
+      } else if (arena[z][y-1][x].visited) {
+        init();
+      }
+      break;
+    case 'W'://está yendo hacia la izquierda
+      if (!arena[z][y][x].north) {//y encuentra una baldosa a su derecha
+        if (!arena[z][y-1][x].visited) {
+          dir = 'N';
+          ignore = true;
+        } else if (arena[z][y][x].west) {//o una pared al frente
+          init();
+        } else if (arena[z][y][x-1].visited) {
+          init();
+        }
+      } else if (arena[z][y][x].west) {//o una pared al frente
+        init();
+      } else if (arena[z][y][x-1].visited) {
+        init();
+      }
+      break;
+    case 'S'://está yendo hacia abajo
+      if (!arena[z][y][x].west) {//y encuentra una baldosa a su derecha
+        if (!arena[z][y][x-1].visited) {
+          dir = 'W';
+          ignore = true;
+        } else if (arena[z][y][x].south) {//o una pared al frente
+          init();
+        } else if (arena[z][y+1][x].visited) {
+          init();
+        }
+      } else if (arena[z][y][x].south) {//o una pared al frente
+        init();
+      } else if (arena[z][y+1][x].visited) {
+        init();
+      }
+      break;
+    default:
+      if (!arena[z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
+        if (!arena[z][y+1][x].visited) {
+          dir = 'S';
+          ignore = true;
+        } else if (arena[z][y][x].east) {//o una pared al frente
+          init();
+        } else if (arena[z][y][x+1].visited) {//o está visitada al frente
+          init();
+        }
+      } else if (arena[z][y][x].east) {//o una pared al frente
+        init();
+      } else if (arena[z][y][x+1].visited) {//o está visitada al frente
+        init();
+      }
+    }
+  }
+
+  void run() {
+    {
+      //lo que significa cada dirección en términos de índices
+      switch(dir) {
+      case 'N': 
+        y--; 
+        break;
+      case 'E': 
+        x++; 
+        break;
+      case 'S': 
+        y++; 
+        break;
+      default: 
+        x--;
+      }
+      arena[z][y][x].visited = true;
+
+      if (!arena[z][y][x].check) {
+        history = (Cell[])append(history, arena[z][y][x]);
+      } else { 
+        history = new Cell[0];
+        lastCheckpoint = arena[z][y][x];
+      }
+      if (arena[z][y][x].black) {
+        switch (dir) {
+        case 'N': 
+          y++; 
+          break;
+        case 'E': 
+          x--; 
+          break;
+        case 'S': 
+          y--; 
+          break;
+        default: 
+          x++;
+        }
+      } else if (arena[z][y][x].exit) {
+        if (!arena[z][y][x].check) {
+          history = (Cell[])append(history, arena[z][y][x]);
+        } else {
+          history = new Cell[0];
+          lastCheckpoint = arena[z][y][x];
+        }
+        z += floorDir;
+        ignore = true;
+        arena[z][y][x].visited = true;
+      }
+    }
+  }
+
   void recorrer() {
     ignore = false;
     if (finishedFloor)floorDir = -1;
@@ -585,264 +702,10 @@ class Robot {
         finishedFloor = false;
       }
     } else {
-      switch (dir) {
-      case 'N'://está yendo hacia arriba
-        if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
-          if (!arena[z][y][x+1].visited) {//no está visitada
-            dir = 'E';
-            ignore = true;
-          } else if (arena[z][y][x].north) {//hay una pared al frente
-            init();
-          } else if (arena[z][y-1][x].visited) {
-            init();
-          }
-        } else if (arena[z][y][x].north) {//o una pared al frente
-          init();
-        } else if (arena[z][y-1][x].visited) {
-          init();
-        }
-        break;
-      case 'W'://está yendo hacia la izquierda
-        if (!arena[z][y][x].north) {//y encuentra una baldosa a su derecha
-          if (!arena[z][y-1][x].visited) {
-            dir = 'N';
-            ignore = true;
-          } else if (arena[z][y][x].west) {//o una pared al frente
-            init();
-          } else if (arena[z][y][x-1].visited) {
-            init();
-          }
-        } else if (arena[z][y][x].west) {//o una pared al frente
-          init();
-        } else if (arena[z][y][x-1].visited) {
-          init();
-        }
-        break;
-      case 'S'://está yendo hacia abajo
-        if (!arena[z][y][x].west) {//y encuentra una baldosa a su derecha
-          if (!arena[z][y][x-1].visited) {
-            dir = 'W';
-            ignore = true;
-          } else if (arena[z][y][x].south) {//o una pared al frente
-            init();
-          } else if (arena[z][y+1][x].visited) {
-            init();
-          }
-        } else if (arena[z][y][x].south) {//o una pared al frente
-          init();
-        } else if (arena[z][y+1][x].visited) {
-          init();
-        }
-        break;
-      default:
-        if (!arena[z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
-          if (!arena[z][y+1][x].visited) {
-            dir = 'S';
-            ignore = true;
-          } else if (arena[z][y][x].east) {//o una pared al frente
-            init();
-          } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-            init();
-          }
-        } else if (arena[z][y][x].east) {//o una pared al frente
-          init();
-        } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-          init();
-        }
-      }
-      if (!ignore) {
-        //lo que significa cada dirección en términos de índices
-        switch(dir) {
-        case 'N': 
-          y--; 
-          break;
-        case 'E': 
-          x++; 
-          break;
-        case 'S': 
-          y++; 
-          break;
-        default: 
-          x--;
-        }
-        arena[z][y][x].visited = true;
 
-        if (!arena[z][y][x].check) {
-          history = (Cell[])append(history, arena[z][y][x]);
-        } else { 
-          history = new Cell[0];
-          lastCheckpoint = arena[z][y][x];
-        }
-        if (arena[z][y][x].black) {
-          switch (dir) {
-          case 'N': 
-            y++; 
-            break;
-          case 'E': 
-            x--; 
-            break;
-          case 'S': 
-            y--; 
-            break;
-          default: 
-            x++;
-          }
-        } else if (arena[z][y][x].exit) {
-          if (!arena[z][y][x].check) {
-            history = (Cell[])append(history, arena[z][y][x]);
-          } else {
-            history = new Cell[0];
-            lastCheckpoint = arena[z][y][x];
-          }
-          z += floorDir;
-          ignore = true;
-          arena[z][y][x].visited = true;
-        }
-      }
+      changeDir();
+
+      if (!ignore) run();
     }
-
-    /*//if (!ignore)arena[z][y][x].stack = cont++;
-     px = x;
-     py = y;
-     
-     ignore = false;
-     
-     if (floorDir == 1 ) if (end()) { 
-     floorDir = -1;
-     }
-     
-     if (!check(y, x))
-     if (!arena[z][y][x].exit)search(arena[z][y][x]);
-     else { 
-     z += floorDir;
-     if (floorDir < 0) {
-     arena[z][y][x].exit = false;
-     }
-     }
-     if (!ignore) {
-     switch (dir) {
-     case 'N'://está yendo hacia arriba
-     if (!arena[z][y][x].east) {//y encuentra una baldosa a su derecha
-     if (!arena[z][y][x+1].visited) {//no está visitada
-     dir = 'E';
-     ignore = true;
-     } else if (arena[z][y][x].north) {//hay una pared al frente
-     init();
-     } else if (arena[z][y-1][x].visited) {
-     init();
-     }
-     } else if (arena[z][y][x].north) {//o una pared al frente
-     init();
-     } else if (arena[z][y-1][x].visited) {
-     init();
-     }
-     break;
-     case 'W'://está yendo hacia la izquierda
-     if (!arena[z][y][x].north) {//y encuentra una baldosa a su derecha
-     if (!arena[z][y-1][x].visited) {
-     dir = 'N';
-     ignore = true;
-     } else if (arena[z][y][x].west) {//o una pared al frente
-     init();
-     } else if (arena[z][y][x-1].visited) {
-     init();
-     }
-     } else if (arena[z][y][x].west) {//o una pared al frente
-     init();
-     } else if (arena[z][y][x-1].visited) {
-     init();
-     }
-     break;
-     case 'S'://está yendo hacia abajo
-     if (!arena[z][y][x].west) {//y encuentra una baldosa a su derecha
-     if (!arena[z][y][x-1].visited) {
-     dir = 'W';
-     ignore = true;
-     } else if (arena[z][y][x].south) {//o una pared al frente
-     init();
-     } else if (arena[z][y+1][x].visited) {
-     init();
-     }
-     } else if (arena[z][y][x].south) {//o una pared al frente
-     init();
-     } else if (arena[z][y+1][x].visited) {
-     init();
-     }
-     break;
-     default:
-     if (!arena[z][y][x].south) {//está yendo a la derecha y encuentra una baldosa a su derecha
-     if (!arena[z][y+1][x].visited) {
-     dir = 'S';
-     ignore = true;
-     } else if (arena[z][y][x].east) {//o una pared al frente
-     init();
-     } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-     init();
-     }
-     } else if (arena[z][y][x].east) {//o una pared al frente
-     init();
-     } else if (arena[z][y][x+1].visited) {//o está visitada al frente
-     init();
-     }
-     }
-     }
-     if (!ignore) {
-     //lo que significa cada dirección en términos de índices
-     switch(dir) {
-     case 'N': 
-     y--; 
-     break;
-     case 'E': 
-     x++; 
-     break;
-     case 'S': 
-     y++; 
-     break;
-     default: 
-     x--;
-     }
-     //delay(200);
-     arena[z][y][x].visited = true;
-     arena[z][y][x].px = px;
-     arena[z][y][x].py = py;
-     
-     if (arena[z][y][x].black) {
-     switch (dir) {
-     case 'N': 
-     y++; 
-     break;
-     case 'E': 
-     x--; 
-     break;
-     case 'S': 
-     y--; 
-     break;
-     default: 
-     x++;
-     }
-     }
-     if (arena[z][y][x].exit) {
-     if (!arena[z][y][x].check) {
-     history = (Cell[])append(history, arena[z][y][x]);
-     } else {
-     history = new Cell[0];
-     lastCheckpoint = arena[z][y][x];
-     }
-     arena[z][y][x].visited = true;
-     if (z < 5) {
-     z += floorDir;
-     ignore = true;
-     arena[z][y][x].visited = true;
-     }
-     }
-     }
-     if (!arena[z][y][x].check) {
-     history = (Cell[])append(history, arena[z][y][x]);
-     } else { 
-     history = new Cell[0];
-     lastCheckpoint = arena[z][y][x];
-     }
-     delay(20);
-     */
   }
 }
