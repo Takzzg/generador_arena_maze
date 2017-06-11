@@ -1,0 +1,356 @@
+#include <mbed.h>
+#include <stdlib.h>
+using namespace std;
+struct Cell{
+  bool north = false; //sets all cell´s variables to false (= blank cell)
+  bool south = false;
+  bool east = false;
+  bool west = false;
+  bool checkpoint = false;
+  bool start = false;
+  bool black = false;
+  bool visited = false;
+  bool deleted = false;
+  bool exit = false;
+  bool out = false;
+  char victimStatus = 'F';
+  char instructions[999];
+  int instructionsWeight = 0;
+  int weight = 9999; //sets a sealing for the weight to compare to
+  int x, y, z; //wid = width of the cells
+};
+
+int ySize = 40;
+int xSize = 40;
+bool finishedFloor = false;
+bool ignore = false;
+char dir = 'N'; //points in which direction the robot is facing. it can be N, E, W or S.
+int x = 20, y = 20, z = 0;
+int floorDir = 1; //set the robot to start exploring upwards (according to the z-axis)
+
+Cell lastCheckpoint;
+Cell history[999];
+int historyWeight = 0;
+Cell arena[5][40][40];
+
+
+Cell addOption(char a, Cell compareFrom, Cell compareTo) {
+  compareTo.weight = compareFrom.weight+1; //changes it's weight
+
+  for(int i = 0; i < compareFrom.instructionsWeight; i++){
+    compareTo.instructions[i] = compareFrom.instructions[i];
+  }
+  //compareTo.instructions = compareFrom.instructions; //instructions to get to compareFrom are copied
+  compareTo.instructions[compareTo.instructionsWeight] = a; //an extra instruction to get to compareFrom is added
+  compareTo.instructionsWeight++;
+  arena[z][compareTo.y][compareTo.x] = compareTo;//the matrix is updated with the newest information
+  return compareTo;
+}
+bool check(int y, int x) {//returns true if at least one neighbour cell isn't explored and there's no wall between the robot and it
+  if (!arena[z][y][x].north) {
+    if (!arena[z][y-1][x].visited) {
+      return true;
+    }
+  }
+  if (!arena[z][y][x].south) {
+    if (!arena[z][y+1][x].visited) {
+      return true;
+    }
+  }
+  if (!arena[z][y][x].east) {
+    if (!arena[z][y][x+1].visited) {
+      return true;
+    }
+  }
+  if (!arena[z][y][x].west) {
+    if (!arena[z][y][x-1].visited) {
+      return true;
+    }
+  }
+  return false;
+}
+bool end() { //checks if the whole room has been visited
+  for (int i = 0; i < ySize; i++) {
+    for (int j = 0; j < xSize; j++) {
+      if (arena[z][i][j].visited && !arena[z][i][j].black) {
+        if (check(i, j))return false;
+      }
+    }
+  }
+  return true;
+}
+void follow(Cell target) {
+  for (int i = 0; i < target.weight; i++) {
+    dir = target.instructions[i];
+    switch(dir) { //draws the blue lines
+    case 'N':
+      y--;
+      break;
+
+    case 'S':
+      y++;
+      break;
+
+    case 'W':
+      x--;
+      break;
+
+    default:
+      x++;
+    }
+  }
+}
+void search(Cell compareFrom) {
+  Cell compareTo;//cell it's going to be visited from compareFrom
+  Cell options[9999];//array which stores the cells that later can be used to compare from
+  arena[z][compareFrom.y][compareFrom.x].weight = 0;//current cell's value is 0
+  compareFrom.weight = 0;
+  finishedFloor = end();
+  int amount = 0;//amount of cells in the array
+
+  while ((!check(compareFrom.y, compareFrom.x) && !finishedFloor) || (finishedFloor && ((!compareFrom.start && z == 0) || (!compareFrom.exit && z != 0)))) {//until it starts comparing from a cell with unvisited neighbours
+    arena[z][compareFrom.y][compareFrom.x].out = true;//the cell is marked on the matrix
+
+    if (!compareFrom.north) {//if there's no north wall
+      if (!arena[z][compareFrom.y-1][compareFrom.x].out && !(arena[z][compareFrom.y-1][compareFrom.x].black && arena[z][compareFrom.y-1][compareFrom.x].visited)) {//if the north cell hasn't been explored
+        compareTo = arena[z][compareFrom.y-1][compareFrom.x];//it's used to compare
+        if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+          options[amount] = addOption('N', compareFrom, compareTo);
+          amount++; //amount of options is incremented
+        }
+      }
+    }
+
+    if (!compareFrom.east && compareFrom.x != xSize-1) {//if there's no east wall
+      if (!arena[z][compareFrom.y][compareFrom.x+1].out && !(arena[z][compareFrom.y][compareFrom.x+1].black && arena[z][compareFrom.y][compareFrom.x+1].visited)) {//the right cell hasn't been explored yet
+        compareTo = arena[z][compareFrom.y][compareFrom.x+1];//used to comapre
+        if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+          options[amount] = addOption('E', compareFrom, compareTo);
+          amount++; //amount of options is incremented
+        }
+      }
+    }
+
+    if (!compareFrom.south && compareFrom.y != ySize-1) {//if there's no south wall
+      if (!arena[z][compareFrom.y+1][compareFrom.x].out && !(arena[z][compareFrom.y+1][compareFrom.x].black && arena[z][compareFrom.y+1][compareFrom.x].visited)) {//if the south cell hasn't been explored yet
+        compareTo = arena[z][compareFrom.y+1][compareFrom.x];//used to compare
+        if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+          options[amount] = addOption('S', compareFrom, compareTo);
+          amount++; //amount of options is incremented
+        }
+      }
+    }
+
+    if (!compareFrom.west) {//if there's no west wall
+      if (!arena[z][compareFrom.y][compareFrom.x-1].out && !(arena[z][compareFrom.y][compareFrom.x-1].black && arena[z][compareFrom.y][compareFrom.x-1].visited)) {//if the west cell hasn't been explored yet
+        compareTo = arena[z][compareFrom.y][compareFrom.x-1];//used to compareSe usa para comparar
+        if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+          options[amount] = addOption('W', compareFrom, compareTo);
+          amount++; //amount of options is incremented
+        }
+      }
+    }
+
+    int bestWeight = 9999;
+    for (int i = 0; i < amount; i++) {//reads the array to find the lower cost cells
+      if (arena[z][options[i].y][options[i].x].weight < bestWeight && !arena[z][options[i].y][options[i].x].out) {
+        bestWeight = options[i].weight;
+      }
+    }
+
+    for (int i = 0; i < amount; i++) {
+      if (!arena[z][options[i].y][options[i].x].out && arena[z][options[i].y][options[i].x].weight == bestWeight) {
+        compareFrom = options[i];
+        break;
+      }
+    }
+  }
+  follow(compareFrom);
+
+  for (int i = 0; i < ySize; i++) {
+    for (int j = 0; j < xSize; j++) {
+      arena[z][i][j].weight = 9999;
+      arena[z][i][j].out = false;
+      arena[z][i][j].instructionsWeight = 0;
+    }
+  }
+  ignore = true;
+}
+
+void init() {
+  if (check(y, x)) {
+    switch(dir) { //if a neighbour cell hasn't been explored yet and there no wall in between, it changes the direction the robot is facing at
+
+    case 'N':
+      dir = 'W';
+      if (!arena[z][y][x].west)
+        if (!arena[z][y][x-1].visited) break;
+
+    case 'W':
+      dir = 'S';
+      if (!arena[z][y][x].south)
+        if (!arena[z][y+1][x].visited) break;
+
+    case 'S':
+      dir = 'E';
+      if (!arena[z][y][x].east)
+        if (!arena[z][y][x+1].visited) break;
+
+    case 'E':
+      dir = 'N';
+      if (!arena[z][y][x].north)
+        if (!arena[z][y-1][x].visited) break;
+      init();
+    }
+    ignore = true;
+  }
+  else ignore = true;
+}
+void changeDir() { //changes robot's direction
+  bool f = false;
+  switch (dir) {
+
+  case 'N'://it's going north
+    if (!arena[z][y][x].east) {//if the east cell isn't explored and has no wall in between
+      if (!arena[z][y][x+1].visited) {
+        dir = 'E';
+        ignore = true;
+        f = true;
+      }
+    }
+    if (f != true) { //else if the north cell hasn't been explored and has no wall between
+      if (arena[z][y][x].north) init();
+      else if (arena[z][y-1][x].visited)init();
+    }
+    break;
+
+  case 'W'://it's going left
+    if (!arena[z][y][x].north) {//if the north cell isn't explored and has no wall in between
+      if (!arena[z][y-1][x].visited) {
+        dir = 'N';
+        ignore = true;
+        f = true;
+      }
+    }
+    if (f != true) { //else if the west cell hasn't been explored and has no wall between
+      if (arena[z][y][x].west) init();
+      else if (arena[z][y][x-1].visited)init();
+    }
+    break;
+
+  case 'S'://it's going down
+    if (!arena[z][y][x].west) {//if the west cell isn't explored and has no wall in between
+      if (!arena[z][y][x-1].visited) {
+        dir = 'W';
+        ignore = true;
+        f = true;
+      }
+    }
+    if (f != true) { //else if the south cell hasn't been explored and has no wall between
+      if (arena[z][y][x].south) init();
+      else if (arena[z][y+1][x].visited)init();
+    }
+    break;
+
+  default: //it's going right
+    if (!arena[z][y][x].south) {//if the south cell isn't explored and has no wall in between
+      if (!arena[z][y+1][x].visited) {
+        dir = 'S';
+        ignore = true;
+        f = true;
+      }
+    }
+    if (f != true) { //else if the east cell hasn't been explored and has no wall between
+      if (arena[z][y][x].east) init();
+      else if (arena[z][y][x+1].visited)init();
+    }
+  }
+}
+
+void run() {
+  {
+    switch(dir) { //what indexes the characters refer to
+    case 'N':
+      y--;
+      break;
+    case 'E':
+      x++;
+      break;
+    case 'S':
+      y++;
+      break;
+    default:
+      x--;
+    }
+
+    arena[z][y][x].visited = true; //sets the current cell as visited
+    if (!arena[z][y][x].checkpoint){
+      history[historyWeight] = arena[z][y][x];
+      historyWeight++;
+    } //if it's not a checkpoint, it's added to the history of visited cells
+    else { //if it is a checkpoint, sets it as the last visited checkpoint and resets the history
+      historyWeight = 0;
+      lastCheckpoint = arena[z][y][x];
+    }
+
+    if (arena[z][y][x].black) { //if it founds a black cell, it'll go back
+      switch (dir) {
+      case 'N':
+        y++;
+        break;
+      case 'E':
+        x--;
+        break;
+      case 'S':
+        y--;
+        break;
+      default:
+        x++;
+      }
+    }
+
+    if (arena[z][y][x].exit) { //if it founds an exit
+      if (!arena[z][y][x].checkpoint){
+        history[historyWeight] = arena[z][y][x];
+        historyWeight++;
+      } //and the room isn't completed yet, it just adds it to the history
+      else { //if the room's fully explored, it restarts the history and sets it as the last checkpoint
+        historyWeight = 0;
+        lastCheckpoint = arena[z][y][x];
+      }
+      z += floorDir;
+      ignore = true;
+      arena[z][y][x].visited = true;
+    }
+  }
+}
+void recorrer(){
+  ignore = false;
+  if (finishedFloor)floorDir = -1; //if it completed a room and has no ramps going up, sets the robot to go down (as to the z-axis)
+  if (!check(y, x)) { //if the room hasn't been fully explored
+    if (!arena[z][y][x].exit) search(arena[z][y][x]); //if it founds a ramp or the room isn't finished it'll continue exploring the room
+    else if (!finishedFloor) search(arena[z][y][x]);
+    else { //if it founds a checkpoint, it'll reset the history and set it as the last visited checkpoint
+      historyWeight = 0;
+      lastCheckpoint = arena[z][y][x];
+    }
+    z += floorDir;
+    ignore = true;
+    arena[z][y][x].visited = true; //sets the cell as visited
+    arena[z][y][x].exit = false;
+    arena[z][y][x].deleted = true;
+    finishedFloor = false;
+  }
+  else {
+    changeDir();
+    if (!ignore) run();
+  }
+}
+
+
+int main(){
+  while (true) {
+    recorrer();
+  }
+  return(0);
+}
