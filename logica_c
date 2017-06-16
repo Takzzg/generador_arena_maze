@@ -1,8 +1,14 @@
 #include <mbed.h>
 #include <stdlib.h>
+#include "MotorDC.h"
+
+MotorDC M_izq(PTD3, PTC9, PTB23);  //pwma, ain1, ain2---- M2
+MotorDC M_der(PTA1, PTB9, PTC1);  //pwmb, bin1, bin2---- M1
+
 using namespace std;
+
 struct Cell{
-  bool north = false; //sets all cell´s variables to false (= blank cell)
+  bool north = false; //sets all cells' variables to false (= blank cell)
   bool south = false;
   bool east = false;
   bool west = false;
@@ -10,33 +16,32 @@ struct Cell{
   bool start = false;
   bool black = false;
   bool visited = false;
-  bool deleted = false;
   bool exit = false;
+  int linkedFloor = 0;
+
   bool out = false;
   char victimStatus = 'F';
   char instructions[999];
   int instructionsWeight = 0;
   int weight = 9999; //sets a sealing for the weight to compare to
-  int x, y, z; //wid = width of the cells
+  int x, y, z;
 };
 
-int ySize = 40;
-int xSize = 40;
-bool finishedFloor = false;
+int ySize = 40;//maximum expected width of the arena (worst case scenario: 20 usable)
+int xSize = 40;//maximum expected height of the arena (worst case scenario: 20 usable)
+bool finishedFloor = false;//this floor has been explored entirely
 bool ignore = false;
 char dir = 'N'; //points in which direction the robot is facing. it can be N, E, W or S.
-int x = 20, y = 20, z = 0;
-int floorDir = 1; //set the robot to start exploring upwards (according to the z-axis)
+int x = 20, y = 20, z = 0;//robot starts in the middle of the first floor.
+int lastFloor = 0;
 
-Cell lastCheckpoint;
-Cell history[999];
-int historyWeight = 0;
-Cell arena[5][40][40];
+Cell lastCheckpoint;//The last checkpoint visited
+Cell history[999];//A list of cells visited since the last checkpoint
+int historyWeight = 0;//Keeps track of the last index used
+Cell arena[5][40][40];//The arena is expected to be up to 5 floors of up to 20 x 20 tiles
 
-
-Cell addOption(char a, Cell compareFrom, Cell compareTo) {
-  compareTo.weight = compareFrom.weight+1; //changes it's weight
-
+Cell addOption(char a, Cell compareFrom, Cell compareTo, int addWeight) {
+  compareTo.weight = compareFrom.weight + addWeight; //changes its weight
   for(int i = 0; i < compareFrom.instructionsWeight; i++){
     compareTo.instructions[i] = compareFrom.instructions[i];
   }
@@ -46,6 +51,7 @@ Cell addOption(char a, Cell compareFrom, Cell compareTo) {
   arena[z][compareTo.y][compareTo.x] = compareTo;//the matrix is updated with the newest information
   return compareTo;
 }
+
 bool check(int y, int x) {//returns true if at least one neighbour cell isn't explored and there's no wall between the robot and it
   if (!arena[z][y][x].north) {
     if (!arena[z][y-1][x].visited) {
@@ -69,6 +75,7 @@ bool check(int y, int x) {//returns true if at least one neighbour cell isn't ex
   }
   return false;
 }
+
 bool end() { //checks if the whole room has been visited
   for (int i = 0; i < ySize; i++) {
     for (int j = 0; j < xSize; j++) {
@@ -79,34 +86,113 @@ bool end() { //checks if the whole room has been visited
   }
   return true;
 }
+
+void turn(char destination){
+  switch(dir){
+    case 'N':
+      switch (destination){
+        case 'N':
+          break;
+        case 'E':
+          //girar 90° a la derecha
+          break;
+        case 'S':
+          //girar 180°
+          break;
+        default:
+          //girar 90° a la izquierda
+          break;
+      }
+      break;
+
+    case 'E':
+      switch (destination){
+        case 'N':
+          //girar 90° a la izquierda
+          break;
+        case 'E':
+          break;
+        case 'S':
+          //girar 90° a la derecha
+          break;
+        default:
+          //girar 180°
+          break;
+      }
+      break;
+
+    case 'S':
+      switch (destination){
+        case 'N':
+          //girar 180°;
+          break;
+        case 'E':
+          //girar 90° a la izquierda
+          break;
+        case 'S':
+          break;
+        default:
+          //girar 90° a la derecha
+          break;
+      }
+      break;
+
+    default:
+      switch (destination){
+        case 'N':
+          //girar 90° a la derecha
+          break;
+        case 'E':
+          //girar 180°
+          break;
+        case 'S':
+          //girar 90° a la izquierda
+          break;
+      }
+
+  }
+  dir = destination;
+}
+
+void moveRobot(int front){
+
+}
+
 void follow(Cell target) {
   for (int i = 0; i < target.weight; i++) {
-    dir = target.instructions[i];
-    switch(dir) { //draws the blue lines
+    //turn(target.instructions[i];
+    turn(target.instructions[i]);
+    switch(dir) { //blindly moves the robot to its target.
     case 'N':
       y--;
+      moveRobot(1);
       break;
 
     case 'S':
       y++;
+      moveRobot(1);
       break;
 
     case 'W':
       x--;
+      moveRobot(1);
       break;
 
     default:
       x++;
+      moveRobot(1);
     }
   }
 }
+
 void search(Cell compareFrom) {
-  Cell compareTo;//cell it's going to be visited from compareFrom
+  Cell compareTo;//cell that's going to be visited from compareFrom
   Cell options[9999];//array which stores the cells that later can be used to compare from
   arena[z][compareFrom.y][compareFrom.x].weight = 0;//current cell's value is 0
   compareFrom.weight = 0;
   finishedFloor = end();
   int amount = 0;//amount of cells in the array
+  int weightGain = 1;
 
   while ((!check(compareFrom.y, compareFrom.x) && !finishedFloor) || (finishedFloor && ((!compareFrom.start && z == 0) || (!compareFrom.exit && z != 0)))) {//until it starts comparing from a cell with unvisited neighbours
     arena[z][compareFrom.y][compareFrom.x].out = true;//the cell is marked on the matrix
@@ -114,8 +200,9 @@ void search(Cell compareFrom) {
     if (!compareFrom.north) {//if there's no north wall
       if (!arena[z][compareFrom.y-1][compareFrom.x].out && !(arena[z][compareFrom.y-1][compareFrom.x].black && arena[z][compareFrom.y-1][compareFrom.x].visited)) {//if the north cell hasn't been explored
         compareTo = arena[z][compareFrom.y-1][compareFrom.x];//it's used to compare
-        if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
-          options[amount] = addOption('N', compareFrom, compareTo);
+        if(('N' != compareFrom.instructions[compareFrom.instructionsWeight - 1] && compareFrom.weight != 0) || (compareFrom.weight == 0 && 'N' != dir))weightGain++;//Add weight if a turn is involved
+        if (compareFrom.weight + weightGain < compareTo.weight) { //if traveling from the actual place there is better than from the last place
+          options[amount] = addOption('N', compareFrom, compareTo, weightGain);
           amount++; //amount of options is incremented
         }
       }
@@ -124,8 +211,9 @@ void search(Cell compareFrom) {
     if (!compareFrom.east && compareFrom.x != xSize-1) {//if there's no east wall
       if (!arena[z][compareFrom.y][compareFrom.x+1].out && !(arena[z][compareFrom.y][compareFrom.x+1].black && arena[z][compareFrom.y][compareFrom.x+1].visited)) {//the right cell hasn't been explored yet
         compareTo = arena[z][compareFrom.y][compareFrom.x+1];//used to comapre
+        if(('E' != compareFrom.instructions[compareFrom.instructionsWeight - 1] && compareFrom.weight != 0) || (compareFrom.weight == 0 && 'E' != dir))weightGain++;//Add weight if a turn is involved
         if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
-          options[amount] = addOption('E', compareFrom, compareTo);
+          options[amount] = addOption('E', compareFrom, compareTo, weightGain);
           amount++; //amount of options is incremented
         }
       }
@@ -134,8 +222,9 @@ void search(Cell compareFrom) {
     if (!compareFrom.south && compareFrom.y != ySize-1) {//if there's no south wall
       if (!arena[z][compareFrom.y+1][compareFrom.x].out && !(arena[z][compareFrom.y+1][compareFrom.x].black && arena[z][compareFrom.y+1][compareFrom.x].visited)) {//if the south cell hasn't been explored yet
         compareTo = arena[z][compareFrom.y+1][compareFrom.x];//used to compare
+        if(('S' != compareFrom.instructions[compareFrom.instructionsWeight - 1] && compareFrom.weight != 0) || (compareFrom.weight == 0 && 'S' != dir))weightGain++;//Add weight if a turn is involved
         if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
-          options[amount] = addOption('S', compareFrom, compareTo);
+          options[amount] = addOption('S', compareFrom, compareTo, weightGain);
           amount++; //amount of options is incremented
         }
       }
@@ -144,8 +233,9 @@ void search(Cell compareFrom) {
     if (!compareFrom.west) {//if there's no west wall
       if (!arena[z][compareFrom.y][compareFrom.x-1].out && !(arena[z][compareFrom.y][compareFrom.x-1].black && arena[z][compareFrom.y][compareFrom.x-1].visited)) {//if the west cell hasn't been explored yet
         compareTo = arena[z][compareFrom.y][compareFrom.x-1];//used to compareSe usa para comparar
+        if(('W' != compareFrom.instructions[compareFrom.instructionsWeight - 1] && compareFrom.weight != 0) || (compareFrom.weight == 0 && 'W' != dir))weightGain++;//Add weight if a turn is involved
         if (compareFrom.weight+1 < compareTo.weight) { //if traveling from the actual place there is better than from the last place
-          options[amount] = addOption('W', compareFrom, compareTo);
+          options[amount] = addOption('W', compareFrom, compareTo, weightGain);
           amount++; //amount of options is incremented
         }
       }
@@ -165,6 +255,7 @@ void search(Cell compareFrom) {
       }
     }
   }
+
   follow(compareFrom);
 
   for (int i = 0; i < ySize; i++) {
@@ -182,22 +273,22 @@ void init() {
     switch(dir) { //if a neighbour cell hasn't been explored yet and there no wall in between, it changes the direction the robot is facing at
 
     case 'N':
-      dir = 'W';
+      turn('W');
       if (!arena[z][y][x].west)
         if (!arena[z][y][x-1].visited) break;
 
     case 'W':
-      dir = 'S';
+      turn('S');
       if (!arena[z][y][x].south)
         if (!arena[z][y+1][x].visited) break;
 
     case 'S':
-      dir = 'E';
+      turn('E');
       if (!arena[z][y][x].east)
         if (!arena[z][y][x+1].visited) break;
 
     case 'E':
-      dir = 'N';
+      turn('N');
       if (!arena[z][y][x].north)
         if (!arena[z][y-1][x].visited) break;
       init();
@@ -206,14 +297,25 @@ void init() {
   }
   else ignore = true;
 }
+
+void loadData(){
+  Cell load;/*
+  load.black = (cny < BLACK);
+  load.checkpoint = (cny > CHECKPOINT);
+  load.north = ( && );
+  load.east = ( && );
+  load.south = ( && );
+  load.west = ( && );*/
+  arena[z][y][x] = load;
+}
+
 void changeDir() { //changes robot's direction
   bool f = false;
   switch (dir) {
-
   case 'N'://it's going north
     if (!arena[z][y][x].east) {//if the east cell isn't explored and has no wall in between
       if (!arena[z][y][x+1].visited) {
-        dir = 'E';
+        turn('E');
         ignore = true;
         f = true;
       }
@@ -227,7 +329,7 @@ void changeDir() { //changes robot's direction
   case 'W'://it's going left
     if (!arena[z][y][x].north) {//if the north cell isn't explored and has no wall in between
       if (!arena[z][y-1][x].visited) {
-        dir = 'N';
+        turn('N');
         ignore = true;
         f = true;
       }
@@ -241,7 +343,7 @@ void changeDir() { //changes robot's direction
   case 'S'://it's going down
     if (!arena[z][y][x].west) {//if the west cell isn't explored and has no wall in between
       if (!arena[z][y][x-1].visited) {
-        dir = 'W';
+        turn('W');
         ignore = true;
         f = true;
       }
@@ -255,7 +357,7 @@ void changeDir() { //changes robot's direction
   default: //it's going right
     if (!arena[z][y][x].south) {//if the south cell isn't explored and has no wall in between
       if (!arena[z][y+1][x].visited) {
-        dir = 'S';
+        turn('S');
         ignore = true;
         f = true;
       }
@@ -272,16 +374,21 @@ void run() {
     switch(dir) { //what indexes the characters refer to
     case 'N':
       y--;
+      moveRobot(1);
       break;
     case 'E':
       x++;
+      moveRobot(1);
       break;
     case 'S':
       y++;
+      moveRobot(1);
       break;
     default:
       x--;
+      moveRobot(1);
     }
+    loadData();
 
     arena[z][y][x].visited = true; //sets the current cell as visited
     if (!arena[z][y][x].checkpoint){
@@ -297,19 +404,23 @@ void run() {
       switch (dir) {
       case 'N':
         y++;
+        moveRobot(-1);
         break;
       case 'E':
         x--;
+        moveRobot(-1);
         break;
       case 'S':
         y--;
+        moveRobot(-1);
         break;
       default:
         x++;
+        moveRobot(-1);
       }
     }
 
-    if (arena[z][y][x].exit) { //if it founds an exit
+    if (arena[z][y][x].exit) { //if it finds an exit
       if (!arena[z][y][x].checkpoint){
         history[historyWeight] = arena[z][y][x];
         historyWeight++;
@@ -318,35 +429,37 @@ void run() {
         historyWeight = 0;
         lastCheckpoint = arena[z][y][x];
       }
-      z += floorDir;
+      arena[z][y][x].linkedFloor = ++lastFloor;
+      arena[lastFloor][y][x].linkedFloor = z;
+      //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ]//
+      z = lastFloor;
       ignore = true;
       arena[z][y][x].visited = true;
     }
   }
 }
+
 void recorrer(){
+  loadData();
   ignore = false;
-  if (finishedFloor)floorDir = -1; //if it completed a room and has no ramps going up, sets the robot to go down (as to the z-axis)
-  if (!check(y, x)) { //if the room hasn't been fully explored
-    if (!arena[z][y][x].exit) search(arena[z][y][x]); //if it founds a ramp or the room isn't finished it'll continue exploring the room
-    else if (!finishedFloor) search(arena[z][y][x]);
-    else { //if it founds a checkpoint, it'll reset the history and set it as the last visited checkpoint
-      historyWeight = 0;
-      lastCheckpoint = arena[z][y][x];
+  finishedFloor = false;
+  if (!check(y, x)) { //if the robot is stuck
+    if (!arena[z][y][x].exit) search(arena[z][y][x]); //if it's stuck on a ramp and the room isn't finished it'll continue exploring the room
+    else if (!finishedFloor) search(arena[z][y][x]);//got stuck on a visited ramp, but there are still some tiles left unvisited.
+    else{
+      //[INSERTE FUNCIÓN PARA SUBIR O BAJAR UNA RAMPA AQUÍ]//
+      z = arena[z][y][x].linkedFloor;
+      ignore = true;
+      arena[z][y][x].visited = true; //sets the cell as visited
+      arena[z][y][x].exit = false;
+      finishedFloor = false;
     }
-    z += floorDir;
-    ignore = true;
-    arena[z][y][x].visited = true; //sets the cell as visited
-    arena[z][y][x].exit = false;
-    arena[z][y][x].deleted = true;
-    finishedFloor = false;
   }
   else {
     changeDir();
     if (!ignore) run();
   }
 }
-
 
 int main(){
   while (true) {
