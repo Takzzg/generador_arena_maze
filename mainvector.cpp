@@ -65,6 +65,8 @@ typedef struct Cell {
   int weight; //sets a ceiling for the weight to compare to
   unsigned int x, y, z;
   int linkedFloor;
+  int linkedX;
+  int linkedY;
 }Cell;
 
 void initCells(Cell *targ, int Z, int Y, int X) {
@@ -102,6 +104,8 @@ void assignCells(Cell *to, Cell from){
   to->start = from.start;
   to->victimStatus =  from.victimStatus;
   to->instructions = from.instructions;
+  to->linkedX = from.linkedX;
+  to->linkedY = from.linkedY;
 }
 
 bool finishedFloor = false; //this floor has been explored entirely
@@ -486,7 +490,11 @@ void run() {
       arena.at(z).at(y).at(x).linkedFloor = ++lastFloor;
       addLayer('z');
       arena.at(lastFloor).at(y).at(x).linkedFloor = z;
+      arena.at(lastFloor).at(y).at(x).linkedX = x;
+      arena.at(lastFloor).at(y).at(x).linkedY = y;
       //[INSERTE FUNCIÓN PARA SUBIR RAMPAS AQUÍ] //
+      x = 0;
+      y = 0;
       z = lastFloor;
       ignore = true;
       arena.at(z).at(y).at(x).visited = true;
@@ -523,6 +531,8 @@ void explore() {
     else {
       //[PLEASE INSERTE FUNCIÓN PARA SUBIR O BAJAR UNA RAMPA AQUÍ PLEASEEEEE] //
       z = arena.at(z).at(y).at(x).linkedFloor;
+      x = arena.at(z).at(y).at(x).linkedX;
+      y = arena.at(z).at(y).at(x).linkedY;
       ignore = true;
       arena.at(z).at(y).at(x).visited = true;
       arena.at(z).at(y).at(x).exit = false;
