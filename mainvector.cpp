@@ -48,7 +48,6 @@ using namespace std;
 
  Ticker update_speed_motors;
  */
-
 typedef struct Cell {
   bool north; //sets all cells' variables to false (= blank cell)
   bool south;
@@ -68,7 +67,13 @@ typedef struct Cell {
   int linkedX;
   int linkedY;
 }Cell;
-
+/**
+ * [initCells description]
+ * @param targ [description]
+ * @param Z    [description]
+ * @param Y    [description]
+ * @param X    [description]
+ */
 void initCells(Cell *targ, int Z, int Y, int X) {
   targ->z = Z;
   targ->y = Y;
@@ -88,7 +93,11 @@ void initCells(Cell *targ, int Z, int Y, int X) {
   targ->victimStatus = 'F';
   targ->instructions.clear();
 }
-
+/**
+ * [assignCells description]
+ * @param to   [description]
+ * @param from [description]
+ */
 void assignCells(Cell *to, Cell from){
   to->black = from.black;
   to->exit = from.exit;
@@ -114,23 +123,34 @@ char dir = 'N'; //points in which direction the robot is facing. it can be N, E,
 unsigned int x = 0, y = 0, z = 0; //robot starts in the middle of the first floor.
 int lastFloor = 0;
 int quit = 0;
-
+/**
+ * [moveTileBackward description]
+ */
 void moveTileBackward(){
 
 }
-
+/**
+ * [moveTileForward description]
+ */
 void moveTileForward(){
 
 }
-
+/**
+ * [turn_right description]
+ */
 void turn_right(){
 
 }
-
+/**
+ * [turn_left description]
+ */
 void turn_left(){
 
 }
-
+/**
+ * [moveRobot description]
+ * @param destination [description]
+ */
 void moveRobot(char destination) {
   bool reverse = false; //instead of turning 180°, we can go back 30cm and keep the direction
   if (destination != dir) {//we have to turn or go backwards
@@ -211,6 +231,14 @@ Cell lastCheckpoint; //The last checkpoint visited
 vector<Cell> history;
 vector<vector<vector<Cell> > > arena;
 
+/**
+ * [addOption description]
+ * @param  a           [description]
+ * @param  compareFrom [description]
+ * @param  compareTo   [description]
+ * @param  addWeight   [description]
+ * @return             [description]
+ */
 Cell addOption(char a, Cell compareFrom, Cell compareTo, int addWeight) {
   compareTo.weight = compareFrom.weight + addWeight; //changes its weight
   compareTo.instructions = compareFrom.instructions;
@@ -218,7 +246,10 @@ Cell addOption(char a, Cell compareFrom, Cell compareTo, int addWeight) {
   arena.at(compareTo.z).at(compareTo.y).at(compareTo.x) = compareTo;
   return compareTo;
 }
-
+/**
+ * [addLayer description]
+ * @param axis [description]
+ */
 void addLayer(char axis) {
   if (axis == 'x'){
     arena.at(z).at(y).resize(arena.at(z).at(y).size() + 1);
@@ -238,12 +269,19 @@ void addLayer(char axis) {
     initCells(&arena.at(arena.size() - 1).at(0).at(0), arena.size() - 1, 0, 0);
   }
 }
-
+/**
+ * [addLayer description]
+ * @param axis [description]
+ * @param Y    [description]
+ */
 void addLayer(char axis, int Y){
   arena.at(z).at(Y).resize(arena.at(z).at(Y).size() + 1);
   initCells(&arena.at(z).at(Y).at(arena.at(z).at(Y).size() - 1), z, Y, arena.at(z).at(Y).size() - 1);
 }
-
+/**
+ * [shift description]
+ * @param axis [description]
+ */
 void shift(char axis) {
   if (axis == 'x') {//add a layer to the left
     x++;
@@ -278,7 +316,12 @@ void shift(char axis) {
     }
   }
 }
-
+/**
+ * [check description]
+ * @param  y [description]
+ * @param  x [description]
+ * @return   [description]
+ */
 bool check(int y, int x) { //returns true if at least one neighbour cell isn't explored and there's no wall between the robot and it
   if (!arena.at(z).at(y).at(x).north)
     if (!arena.at(z).at(y - 1).at(x).visited) return true;
@@ -294,7 +337,10 @@ bool check(int y, int x) { //returns true if at least one neighbour cell isn't e
 
   return false;
 }
-
+/**
+ * [end description]
+ * @return [description]
+ */
 bool end() { //checks if the whole room has been visited
   for(unsigned int i = 0; i < arena.at(z).size(); i++){
     for(unsigned int j = 0; j < arena.at(z).at(i).size(); j++){
@@ -304,12 +350,18 @@ bool end() { //checks if the whole room has been visited
   }
   return true;
 }
-
+/**
+ * [follow description]
+ * @param target [description]
+ */
 void follow(Cell target) {
   for(unsigned int i = 0; i < target.instructions.size(); i++)
     moveRobot(target.instructions.at(i));
 }
-
+/**
+ * [search description]
+ * @param compareFrom [description]
+ */
 void search(Cell compareFrom) {
   Cell compareTo; //cell that's going to be visited from compareFrom
   vector<Cell> options(0);
@@ -385,7 +437,9 @@ void search(Cell compareFrom) {
   options.clear();
   ignore = true;
 }
-
+/**
+ * [init description]
+ */
 void init() {
   char one_direction[5] = {'N', 'W', 'S', 'E', 'N'};
   for (int i = 0; i < 4; i++){
@@ -395,7 +449,9 @@ void init() {
     }
   }
 }
-
+/**
+ * [loadData description]
+ */
 void loadData() {
   Cell loadCell;
   loadCell.visited = true;
@@ -411,7 +467,9 @@ void loadData() {
   //queda la información de las víctimas y otras cosas. Para testear lo único que importa es que funcione la detección de paredes.
   assignCells(&arena.at(z).at(y).at(x), loadCell);
 }
-
+/**
+ * [changeDir description]
+ */
 void changeDir() { //changes robot's direction
   bool f = false;
   switch (dir) {
@@ -471,7 +529,9 @@ void changeDir() { //changes robot's direction
     }
   }
 }
-
+/**
+ * [run description]
+ */
 void run() {
   moveRobot(dir);
     loadData();
@@ -500,7 +560,9 @@ void run() {
       arena.at(z).at(y).at(x).visited = true;
      }
 }
-
+/**
+ * [expand description]
+ */
 void expand(){
   if(x == 0){
     if(!arena.at(z).at(y).at(x).west)
@@ -519,7 +581,9 @@ void expand(){
       addLayer('y');
   }
 }
-
+/**
+ * [explore description]
+ */
 void explore() {
   loadData();
   expand();
@@ -544,7 +608,10 @@ void explore() {
     if (!ignore) run();
   }
 }
-
+/**
+ * [main description]
+ * @return [description]
+ */
 int main() {
   arena.resize(1);
   arena.at(0).resize(1);
